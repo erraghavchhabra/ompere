@@ -90,7 +90,7 @@ Our focus is on long-term trust — not one-time transactions.`,
     },
   ];
 
-  const [openIndex, setOpenIndex] = useState(null);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <section className="w-full bg-white py-24">

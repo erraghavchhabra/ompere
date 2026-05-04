@@ -80,7 +80,7 @@ Once you accept:
     },
   ];
 
-  const renderLines = (lines) => {
+  const renderLines = (lines: string[]) => {
     return lines.map((line, idx) => {
       if (line.startsWith("✔")) {
         return (
@@ -115,7 +115,6 @@ Once you accept:
   return (
     <section className="w-full py-20">
       <div className="max-w-6xl mx-auto px-6">
-
         {/* HEADER */}
         <div className="text-center mb-20">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
@@ -131,21 +130,21 @@ Once you accept:
 
         {/* STEPS */}
         <div className="space-y-8 md:space-y-10">
-
           {steps.map((step, i) => {
             const Icon = step.icon;
 
             const lines = step.content.split("\n");
-            const title = lines[0];       // first line only
-            const body = lines.slice(1);  // rest only
+            const title = lines[0]; // first line only
+            const body = lines.slice(1); // rest only
 
             return (
               <div key={i} className="flex gap-6">
-
                 {/* STEP NUMBER */}
                 <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 
-                                  text-white flex items-center justify-center font-bold shadow-lg">
+                  <div
+                    className="w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 
+                                  text-white flex items-center justify-center font-bold shadow-lg"
+                  >
                     {String(i + 1).padStart(2, "0")}
                   </div>
 
@@ -156,7 +155,6 @@ Once you accept:
 
                 {/* CARD */}
                 <div className="w-full bg-white border border-gray-100 rounded-xl p-8 shadow-md">
-
                   {/* ICON */}
                   <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 border border-orange-300">
@@ -170,16 +168,11 @@ Once you accept:
                   </div>
 
                   {/* CONTENT (NO DUPLICATE HEADING) */}
-                  <div className="space-y-3">
-                    {renderLines(body)}
-                  </div>
-
+                  <div className="space-y-3">{renderLines(body)}</div>
                 </div>
-
               </div>
             );
           })}
-
         </div>
       </div>
     </section>

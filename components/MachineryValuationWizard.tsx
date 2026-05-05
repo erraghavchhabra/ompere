@@ -42,7 +42,17 @@ export default function MachineryValuationWizard() {
     "Silent DG Set": { min: "₹5,40,000", max: "₹6,25,000" },
     "Industrial Pro X": { min: "₹8,75,000", max: "₹10,20,000" },
   };
+  const canopyTypes = ["Silent Canopy", "Open Type", "Acoustic Enclosure"];
 
+  const capacities = [
+    "15 KVA",
+    "25 KVA",
+    "62.5 KVA",
+    "125 KVA",
+    "250 KVA",
+    "500 KVA",
+    "1000 KVA",
+  ];
   const years = Array.from(
     { length: new Date().getFullYear() - 1999 },
     (_, i) => `${2000 + i}`,
@@ -106,10 +116,11 @@ export default function MachineryValuationWizard() {
               {step === 1 && (
                 <>
                   <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
-                    Which machinery do you own?
+                    Price Calculator
                   </h2>
 
                   <div className="space-y-5">
+                    {/* Machine Type */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
                         Machine Type
@@ -127,6 +138,7 @@ export default function MachineryValuationWizard() {
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4">
+                      {/* Brand */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-2">
                           Brand
@@ -143,37 +155,48 @@ export default function MachineryValuationWizard() {
                         </div>
                       </div>
 
+                      {/* Canopy / Model */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          Year
+                          Canopy / Model
                         </label>
 
                         <div className="relative">
-                          <select className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white">
-                            <option>Select Year</option>
-                            {years.map((year) => (
-                              <option key={year}>{year}</option>
-                            ))}
+                          <select
+                            value={selectedModel}
+                            onChange={(e) => setSelectedModel(e.target.value)}
+                            className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
+                          >
+                            <option value="">Select Option</option>
+
+                            <optgroup label="Canopy Type">
+                              {canopyTypes.map((type) => (
+                                <option key={type}>{type}</option>
+                              ))}
+                            </optgroup>
+
+                            <optgroup label="Models">
+                              {models.map((model) => (
+                                <option key={model}>{model}</option>
+                              ))}
+                            </optgroup>
                           </select>
+
                           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                         </div>
                       </div>
                     </div>
-
+                    {/* Capacity */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Model
+                        Capacity
                       </label>
 
                       <div className="relative">
-                        <select
-                          value={selectedModel}
-                          onChange={(e) => setSelectedModel(e.target.value)}
-                          className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
-                        >
-                          <option value="">Select Model</option>
-                          {models.map((model) => (
-                            <option key={model}>{model}</option>
+                        <select className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white">
+                          <option>Select Capacity</option>
+                          {capacities.map((cap) => (
+                            <option key={cap}>{cap}</option>
                           ))}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -200,22 +223,8 @@ export default function MachineryValuationWizard() {
                   <div className="space-y-5">
                     {[
                       {
-                        label: "Engine Condition",
-                        options: [
-                          "0-25% (Poor)",
-                          "26-50% (Average)",
-                          "51-75% (Good)",
-                          "76-100% (Very Good)",
-                        ],
-                      },
-                      {
-                        label: "Tyre Condition",
-                        options: [
-                          "0-25% (Poor)",
-                          "26-50% (Average)",
-                          "51-75% (Good)",
-                          "76-100% (Very Good)",
-                        ],
+                        label: "Year of Purchase",
+                        options: years,
                       },
                       {
                         label: "Running Hours",
@@ -224,6 +233,15 @@ export default function MachineryValuationWizard() {
                           "1,000 - 5,000 Hours",
                           "5,000 - 10,000 Hours",
                           "10,000+ Hours",
+                        ],
+                      },
+                      {
+                        label: "Engine Condition",
+                        options: [
+                          "0-25% (Poor)",
+                          "26-50% (Average)",
+                          "51-75% (Good)",
+                          "76-100% (Very Good)",
                         ],
                       },
                     ].map((field) => (

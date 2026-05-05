@@ -10,8 +10,7 @@ const heroSlides = [
     badge: "India’s Trusted Industrial Marketplace",
     title:
       "Sell Your Used DG Sets & Industrial Machinery at the Best Market Price",
-    desc:
-      "Get instant price estimates, verified offers, and GST-compliant payouts through India’s most trusted machinery resale platform.",
+    desc: "Get instant price estimates, verified offers, and GST-compliant payouts through India’s most trusted machinery resale platform.",
     points: [
       "Best Market Rates",
       "Zero Brokerage",
@@ -22,10 +21,8 @@ const heroSlides = [
   {
     image: "/assets/img/hero-banner2.jpg",
     badge: "Verified Machinery Buyers Across India",
-    title:
-      "Upgrade or Sell Heavy Equipment Quickly With Transparent Valuation",
-    desc:
-      "Connect with serious industrial buyers, get accurate inspections, and secure the best possible resale value without delays.",
+    title: "Upgrade or Sell Heavy Equipment Quickly With Transparent Valuation",
+    desc: "Connect with serious industrial buyers, get accurate inspections, and secure the best possible resale value without delays.",
     points: [
       "Verified Buyers",
       "Pan India Reach",
@@ -36,10 +33,8 @@ const heroSlides = [
   {
     image: "/assets/img/hero-banner3.png",
     badge: "Fast, Secure & Reliable",
-    title:
-      "Turn Idle Machinery Into Instant Capital With Hassle-Free Selling",
-    desc:
-      "From generators to industrial machines, unlock working capital with seamless pickup, secure payment, and end-to-end support.",
+    title: "Turn Idle Machinery Into Instant Capital With Hassle-Free Selling",
+    desc: "From generators to industrial machines, unlock working capital with seamless pickup, secure payment, and end-to-end support.",
     points: [
       "Secure Transactions",
       "Easy Documentation",
@@ -72,11 +67,21 @@ const models = [
   "Mahindra MPower 160",
   "AL DG 250",
 ];
+const capacities = [
+  "15 KVA",
+  "25 KVA",
+  "62.5 KVA",
+  "125 KVA",
+  "250 KVA",
+  "500 KVA",
+  "1000 KVA",
+];
 
-const years = Array.from(
-  { length: new Date().getFullYear() - 1999 },
-  (_, i) => `${2000 + i}`
-);
+const canopyTypes = [
+  "Silent Canopy",
+  "Open Type",
+  "Acoustic Enclosure",
+];
 
 export default function Hero() {
   const [showModal, setShowModal] = useState(false);
@@ -128,16 +133,28 @@ export default function Hero() {
                   ))}
                 </select>
 
-                {/* Brand / Model */}
+                {/* Brand */}
                 <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
-                  <option value="">Brand / Model</option>
-                  <optgroup label="Brands">
-                    {brands.map((brand) => (
-                      <option key={brand} value={brand}>
-                        {brand}
+                  <option value="">Brand</option>
+                  {brands.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Canopy / Model */}
+                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
+                  <option value="">Canopy / Model</option>
+
+                  <optgroup label="Canopy Type">
+                    {canopyTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
                       </option>
                     ))}
                   </optgroup>
+
                   <optgroup label="Models">
                     {models.map((model) => (
                       <option key={model} value={model}>
@@ -147,19 +164,17 @@ export default function Hero() {
                   </optgroup>
                 </select>
 
-                {/* Year */}
+                {/* Capacity */}
                 <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
-                  <option value="">Year of Purchase</option>
-                  {years
-                    .slice()
-                    .reverse()
-                    .map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
+                  <option value="">Capacity</option>
+                  {capacities.map((cap) => (
+                    <option key={cap} value={cap}>
+                      {cap}
+                    </option>
+                  ))}
                 </select>
 
+             
                 <button
                   onClick={() => setShowModal(true)}
                   className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition"
@@ -257,11 +272,11 @@ export default function Hero() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none"
               />
 
-            <Link href="/machinery-valuation">
-  <button className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition">
-    Proceed
-  </button>
-</Link>
+              <Link href="/machinery-valuation">
+                <button className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition">
+                  Proceed
+                </button>
+              </Link>
             </div>
           </div>
         </div>

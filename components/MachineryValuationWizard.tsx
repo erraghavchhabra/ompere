@@ -232,6 +232,69 @@ function MachineryValuationWizardInner() {
     setStep(3);
   };
 
+  useEffect(() => {
+
+  // only run on step 2
+  if (step !== 2) return;
+
+  // must have base selections
+  if (!selectedBrand || !selectedCanopy || !selectedCapacity) return;
+
+  const autoUpdatePrice = async () => {
+
+    setCalculating(true);
+
+    try {
+
+      const body: Record<string, string> = {
+        brand_id: selectedBrand,
+        canopy_id: selectedCanopy,
+        capacity_kva: selectedCapacity,
+      };
+
+      if (selectedYear) {
+        body.make_year = selectedYear;
+      }
+
+      if (selectedHours) {
+        body.running_hours = selectedHours;
+      }
+
+      if (selectedEngineCondition) {
+        body.engine_condition = selectedEngineCondition;
+      }
+
+      const res = await fetch(API.calculate, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data: PriceResult = await res.json();
+
+      setPriceResult(data);
+
+    } catch (err) {
+
+      console.error("Live calculation error:", err);
+
+    } finally {
+
+      setCalculating(false);
+
+    }
+  };
+
+  autoUpdatePrice();
+
+}, [
+  selectedYear,
+  selectedHours,
+  selectedEngineCondition
+]);
+
   const prevStep = () => step > 1 && setStep(step - 1);
 
   const years = Array.from(
@@ -488,17 +551,22 @@ function MachineryValuationWizardInner() {
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">Engine Condition</label>
                       <div className="relative">
-                        <select
-                          value={selectedEngineCondition}
-                          onChange={(e) => setSelectedEngineCondition(e.target.value)}
-                          className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
-                        >
-                          <option value="">Select Engine Condition</option>
-                          <option value="12.5">0–25% (Poor)</option>
-                          <option value="38">26–50% (Average)</option>
-                          <option value="63">51–75% (Good)</option>
-                          <option value="88">76–100% (Very Good)</option>
-                        </select>
+                     <select
+  value={selectedEngineCondition}
+  onChange={(e) => setSelectedEngineCondition(e.target.value)}
+  className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
+>
+  <option value="">Select Engine Condition</option>
+
+  {/* +5% */}
+  <option value="1.05">Excellent</option>
+
+  {/* No change */}
+  <option value="1">Moderate</option>
+
+  {/* -5% */}
+  <option value="0.95">Poor</option>
+</select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                       </div>
                     </div>
@@ -602,12 +670,62 @@ function MachineryValuationWizardInner() {
 
     {!calculating && priceResult?.estimated_price && (() => {
 
-      const est = typeof priceResult.estimated_price === "string"
-        ? parseFloat(priceResult.estimated_price)
-        : Number(priceResult.estimated_price);
+  const baseDay2Price =
+  typeof priceResult.day2_price === "string"
+    ? parseFloat(priceResult.day2_price)
+    : Number(priceResult.day2_price);
 
-      const low  = Math.round(est * 0.9);
-      const high = Math.round(est * 1.1);
+const yearFactor =
+  typeof priceResult.year_factor === "number"
+    ? priceResult.year_factor
+    : 1;
+
+const hoursFactor =
+  typeof priceResult.hours_factor === "number"
+    ? priceResult.hours_factor
+    : 1;
+
+const engineFactor =
+  typeof priceResult.engine_factor === "number"
+    ? priceResult.engine_factor
+    : 1;
+
+// Check if user selected condition inputs
+const hasConditionFilters =
+  selectedYear ||
+  selectedHours ||
+  selectedEngineCondition;
+
+let high = 0;
+let low = 0;
+
+if (!hasConditionFilters) {
+
+  // BEFORE year/hours selection
+
+  // Max = original day2 price
+  high = Math.round(baseDay2Price);
+
+  // Min = 75% lower
+  low = Math.round(high * 0.25);
+
+} else {
+
+  // AFTER year/hours selection
+
+  // Adjusted price
+  const adjustedDay2Price =
+    baseDay2Price *
+    yearFactor *
+    hoursFactor *
+    engineFactor;
+
+  // Max = adjusted price
+  high = Math.round(adjustedDay2Price);
+
+  // Min = 15% lower
+  low = Math.round(high * 0.85);
+}
 
       return (
         <div className="relative px-2">

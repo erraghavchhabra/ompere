@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, ChevronDown, Upload, X, Loader2 } from "lucide-react";
 import { API } from "@/lib/api";
@@ -37,7 +37,8 @@ interface PriceResult {
   message?: string;
 }
 
-export default function MachineryValuationWizard() {
+// ─── Inner component (uses useSearchParams) ───────────────────────────────────
+function MachineryValuationWizardInner() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
@@ -256,28 +257,29 @@ export default function MachineryValuationWizard() {
     try {
       const formData = new FormData();
 
-      // Name & phone from URL params
       formData.append("name", nameFromUrl);
       formData.append("phone", phoneFromUrl);
 
-      // Step 1
-      if (selectedMachineType) formData.append("machine_type_id", selectedMachineType);
+      if (selectedMachineType)
+        formData.append("machine_type_id", selectedMachineType);
       formData.append("brand_id", selectedBrand);
       formData.append("canopy_id", selectedCanopy);
       formData.append("capacity_kva", selectedCapacity);
 
-      // Step 2
       if (selectedYear) formData.append("make_year", selectedYear);
       if (selectedHours) formData.append("running_hours", selectedHours);
-      if (selectedEngineCondition) formData.append("engine_condition", selectedEngineCondition);
+      if (selectedEngineCondition)
+        formData.append("engine_condition", selectedEngineCondition);
 
-      // Calculated price values
       if (priceResult?.price_new != null)
         formData.append("price_new", String(priceResult.price_new));
       if (priceResult?.day2_price != null)
         formData.append("day2_price", String(priceResult.day2_price));
       if (priceResult?.estimated_price != null)
-        formData.append("estimated_price", String(priceResult.estimated_price));
+        formData.append(
+          "estimated_price",
+          String(priceResult.estimated_price)
+        );
       if (priceResult?.year_factor != null)
         formData.append("year_factor", String(priceResult.year_factor));
       if (priceResult?.hours_factor != null)
@@ -285,7 +287,6 @@ export default function MachineryValuationWizard() {
       if (priceResult?.engine_factor != null)
         formData.append("engine_factor", String(priceResult.engine_factor));
 
-      // Step 3 — images (actual File objects)
       uploadedImages.forEach((file) => {
         formData.append("images[]", file);
       });
@@ -381,7 +382,6 @@ export default function MachineryValuationWizard() {
                   <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
                     Price Calculator
                   </h2>
-
                   <div className="space-y-5">
                     {/* Machine Type */}
                     <div>
@@ -423,7 +423,9 @@ export default function MachineryValuationWizard() {
                           <div className="relative">
                             <select
                               value={selectedBrand}
-                              onChange={(e) => setSelectedBrand(e.target.value)}
+                              onChange={(e) =>
+                                setSelectedBrand(e.target.value)
+                              }
                               className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white ${
                                 calcError && !selectedBrand
                                   ? "border-red-400"
@@ -445,7 +447,8 @@ export default function MachineryValuationWizard() {
                       {/* Canopy / Model */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          Canopy / Model <span className="text-red-500">*</span>
+                          Canopy / Model{" "}
+                          <span className="text-red-500">*</span>
                         </label>
                         {loading ? (
                           <SelectSkeleton />
@@ -537,7 +540,6 @@ export default function MachineryValuationWizard() {
                   <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
                     What is the machinery condition?
                   </h2>
-
                   <div className="space-y-5">
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -579,7 +581,7 @@ export default function MachineryValuationWizard() {
                           <option value="7000">6,000 – 8,000 hrs</option>
                           <option value="9000">8,000 – 10,000 hrs</option>
                           <option value="10000">10,000+ hrs</option>
-                          <option value="-1">Don't know</option>
+                          <option value="-1">Don&apos;t know</option>
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                       </div>
@@ -740,7 +742,8 @@ export default function MachineryValuationWizard() {
 
               {!calculating && priceResult && !priceResult.status && (
                 <p className="text-sm text-red-500 mb-4">
-                  {priceResult.message || "Price not found for selected options."}
+                  {priceResult.message ||
+                    "Price not found for selected options."}
                 </p>
               )}
 
@@ -796,60 +799,88 @@ export default function MachineryValuationWizard() {
                     </div>
                   </div>
                   <div className="h-px bg-orange-100 my-3" />
-           {priceResult.estimated_price && (() => {
-  const est = typeof priceResult.estimated_price === "string"
-    ? parseFloat(priceResult.estimated_price)
-    : Number(priceResult.estimated_price);
-  const low = Math.round(est * 0.9);
-  const high = Math.round(est * 1.1);
-  return (
-    <div className="bg-orange-50 rounded-2xl px-4 py-4 mb-3">
-      <p className="text-xs text-gray-500 mb-3">Estimated Resale Value</p>
-      <div className="flex items-center justify-between gap-4">
-        {/* Min */}
-        <div className="flex-1 bg-white rounded-xl px-4 py-3 border border-orange-100 text-center">
-          <p className="text-xs text-gray-400 mb-1">Min Price</p>
-          <p className="text-lg font-bold text-gray-800">
-            {formatCurrency(low)}
-          </p>
-          {/* downward triangle like TractorJunction */}
-          <div className="flex justify-center mt-1">
-            <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
-              <path d="M7 8L0 0H14L7 8Z" fill="#f07020" opacity="0.5"/>
-            </svg>
-          </div>
-        </div>
-
-        <span className="text-gray-300 font-light text-xl">—</span>
-
-        {/* Max */}
-        <div className="flex-1 bg-white rounded-xl px-4 py-3 border border-orange-100 text-center">
-          <p className="text-xs text-gray-400 mb-1">Max Price</p>
-          <p className="text-lg font-bold text-[#f07020]">
-            {formatCurrency(high)}
-          </p>
-          <div className="flex justify-center mt-1">
-            <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
-              <path d="M7 8L0 0H14L7 8Z" fill="#f07020"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div className="text-right text-xs text-gray-400 space-y-0.5 mt-3">
-        {priceResult.year_factor && (
-          <p>Age: ×{priceResult.year_factor.toFixed(2)}</p>
-        )}
-        {priceResult.hours_factor && (
-          <p>Hours: ×{priceResult.hours_factor.toFixed(2)}</p>
-        )}
-        {priceResult.engine_factor && (
-          <p>Engine: ×{priceResult.engine_factor.toFixed(2)}</p>
-        )}
-      </div>
-    </div>
-  );
-})()}
+                  {priceResult.estimated_price &&
+                    (() => {
+                      const est =
+                        typeof priceResult.estimated_price === "string"
+                          ? parseFloat(priceResult.estimated_price)
+                          : Number(priceResult.estimated_price);
+                      const low = Math.round(est * 0.9);
+                      const high = Math.round(est * 1.1);
+                      return (
+                        <div className="bg-orange-50 rounded-2xl px-4 py-4 mb-3">
+                          <p className="text-xs text-gray-500 mb-3">
+                            Estimated Resale Value
+                          </p>
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 bg-white rounded-xl px-4 py-3 border border-orange-100 text-center">
+                              <p className="text-xs text-gray-400 mb-1">
+                                Min Price
+                              </p>
+                              <p className="text-lg font-bold text-gray-800">
+                                {formatCurrency(low)}
+                              </p>
+                              <div className="flex justify-center mt-1">
+                                <svg
+                                  width="14"
+                                  height="8"
+                                  viewBox="0 0 14 8"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M7 8L0 0H14L7 8Z"
+                                    fill="#f07020"
+                                    opacity="0.5"
+                                  />
+                                </svg>
+                              </div>
+                            </div>
+                            <span className="text-gray-300 font-light text-xl">
+                              —
+                            </span>
+                            <div className="flex-1 bg-white rounded-xl px-4 py-3 border border-orange-100 text-center">
+                              <p className="text-xs text-gray-400 mb-1">
+                                Max Price
+                              </p>
+                              <p className="text-lg font-bold text-[#f07020]">
+                                {formatCurrency(high)}
+                              </p>
+                              <div className="flex justify-center mt-1">
+                                <svg
+                                  width="14"
+                                  height="8"
+                                  viewBox="0 0 14 8"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M7 8L0 0H14L7 8Z"
+                                    fill="#f07020"
+                                  />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs text-gray-400 space-y-0.5 mt-3">
+                            {priceResult.year_factor && (
+                              <p>
+                                Age: ×{priceResult.year_factor.toFixed(2)}
+                              </p>
+                            )}
+                            {priceResult.hours_factor && (
+                              <p>
+                                Hours: ×{priceResult.hours_factor.toFixed(2)}
+                              </p>
+                            )}
+                            {priceResult.engine_factor && (
+                              <p>
+                                Engine:{" "}
+                                ×{priceResult.engine_factor.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   <div className="h-2 rounded-full bg-gradient-to-r from-yellow-400 via-green-500 to-[#f07020]" />
                   <p className="text-xs text-gray-400 mt-3">
                     Final price subject to physical inspection.
@@ -900,5 +931,26 @@ export default function MachineryValuationWizard() {
       <div className="absolute top-0 right-0 w-72 h-72 bg-[#f07020]/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-200/20 rounded-full blur-3xl pointer-events-none" />
     </section>
+  );
+}
+
+// ─── Loading fallback ─────────────────────────────────────────────────────────
+function WizardFallback() {
+  return (
+    <section className="min-h-screen py-14 bg-gradient-to-b from-white to-orange-50/40 flex items-center justify-center">
+      <div className="flex items-center gap-3 text-gray-400">
+        <Loader2 className="w-5 h-5 animate-spin text-[#f07020]" />
+        <span className="text-sm">Loading valuation wizard...</span>
+      </div>
+    </section>
+  );
+}
+
+// ─── Public export — wrapped in Suspense ─────────────────────────────────────
+export default function MachineryValuationWizard() {
+  return (
+    <Suspense fallback={<WizardFallback />}>
+      <MachineryValuationWizardInner />
+    </Suspense>
   );
 }

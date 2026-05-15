@@ -5,25 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle, ChevronDown, Upload, X, Loader2 } from "lucide-react";
 import { API } from "@/lib/api";
 
-interface MachineType {
-  id: number | string;
-  name: string;
-}
-
-interface Brand {
-  id: number | string;
-  name: string;
-}
-
-interface Canopy {
-  id: number | string;
-  name: string;
-}
-
-interface Capacity {
-  id: number | string;
-  kva: number | string;
-}
+interface Brand  { id: number | string; name: string }
+interface Canopy { id: number | string; name: string }
+interface Capacity { kva: number | string }
 
 interface PriceResult {
   status: boolean;
@@ -37,110 +21,142 @@ interface PriceResult {
   message?: string;
 }
 
-// ─── Inner component (uses useSearchParams) ───────────────────────────────────
+// ─── Inner component ──────────────────────────────────────────────────────────
 function MachineryValuationWizardInner() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
-  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [uploadedImages, setUploadedImages]   = useState<File[]>([]);
   const [uploadedPreviews, setUploadedPreviews] = useState<string[]>([]);
 
-  // Name & phone from Hero modal query params
-  const nameFromUrl = searchParams.get("name") ?? "";
+  // ── machine_type always = 1, never shown ─────────────────────────────────
+  const MACHINE_TYPE_ID = "1";
+
+  const nameFromUrl  = searchParams.get("name")  ?? "";
   const phoneFromUrl = searchParams.get("phone") ?? "";
 
-  // Step 1 form state — pre-filled from query params if present
-  const [selectedMachineType, setSelectedMachineType] = useState(
-    searchParams.get("machine_type_id") ?? ""
-  );
-  const [selectedBrand, setSelectedBrand] = useState(
-    searchParams.get("brand_id") ?? ""
-  );
-  const [selectedCanopy, setSelectedCanopy] = useState(
-    searchParams.get("canopy_id") ?? ""
-  );
-  const [selectedCapacity, setSelectedCapacity] = useState(
-    searchParams.get("capacity_kva") ?? ""
-  );
+  // Step 1 — pre-filled from URL
+  const [selectedBrand,    setSelectedBrand]    = useState(searchParams.get("brand_id")    ?? "");
+  const [selectedCanopy,   setSelectedCanopy]   = useState(searchParams.get("canopy_id")   ?? "");
+  const [selectedCapacity, setSelectedCapacity] = useState(searchParams.get("capacity_kva") ?? "");
 
-  // Step 2 state
-  const [selectedYear, setSelectedYear] = useState("");
-  const [selectedHours, setSelectedHours] = useState("");
+  // Step 2
+  const [selectedYear,            setSelectedYear]            = useState("");
+  const [selectedHours,           setSelectedHours]           = useState("");
   const [selectedEngineCondition, setSelectedEngineCondition] = useState("");
 
-  // Dynamic API data
-  const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [capacities, setCapacities] = useState<Capacity[]>([]);
-  const [canopies, setCanopies] = useState<Canopy[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ── Dropdown data ─────────────────────────────────────────────────────────
+  const [brands,           setBrands]           = useState<Brand[]>([]);
+  const [canopyOptions,    setCanopyOptions]    = useState<Canopy[]>([]);
+  const [capacityOptions,  setCapacityOptions]  = useState<Capacity[]>([]);
 
-  // Calculate API state
-  const [calculating, setCalculating] = useState(false);
-  const [priceResult, setPriceResult] = useState<PriceResult | null>(null);
-  const [calcError, setCalcError] = useState<string | null>(null);
+  // ── Loading flags ─────────────────────────────────────────────────────────
+  const [loadingBrands,    setLoadingBrands]    = useState(true);
+  const [loadingCanopy,    setLoadingCanopy]    = useState(false);
+  const [loadingCapacity,  setLoadingCapacity]  = useState(false);
 
-  // Submit state
-  const [submitting, setSubmitting] = useState(false);
+  // ── Calculate / submit state ──────────────────────────────────────────────
+  const [calculating,   setCalculating]   = useState(false);
+  const [priceResult,   setPriceResult]   = useState<PriceResult | null>(null);
+  const [calcError,     setCalcError]     = useState<string | null>(null);
+  const [submitting,    setSubmitting]    = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError,   setSubmitError]   = useState<string | null>(null);
 
+  // ── 1. Fetch brands once ──────────────────────────────────────────────────
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        await Promise.all([
-          fetch(API.machineTypes)
-            .then((res) => res.json())
-            .then(setMachineTypes)
-            .catch((err) => console.error("machineTypes error:", err)),
-
-          fetch(API.brands)
-            .then((res) => res.json())
-            .then(setBrands)
-            .catch((err) => console.error("brands error:", err)),
-
-          fetch(API.capacities)
-            .then((res) => res.json())
-            .then(setCapacities)
-            .catch((err) => console.error("capacities error:", err)),
-
-          fetch(API.canopies)
-            .then((res) => res.json())
-            .then(setCanopies)
-            .catch((err) => console.error("canopies error:", err)),
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
+    setLoadingBrands(true);
+    fetch(API.brands)
+      .then((r) => r.json())
+      .then(setBrands)
+      .catch(console.error)
+      .finally(() => setLoadingBrands(false));
   }, []);
 
-  // Auto-trigger calculate when all required params came from the URL
+  // ── 2. When brand pre-filled from URL, load its canopies ─────────────────
   useEffect(() => {
-    const brandFromUrl = searchParams.get("brand_id");
-    const canopyFromUrl = searchParams.get("canopy_id");
-    const capacityFromUrl = searchParams.get("capacity_kva");
+    const brandId = searchParams.get("brand_id");
+    if (!brandId || loadingBrands) return;
+    fetchCanopies(brandId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingBrands]);
 
-    if (!loading && brandFromUrl && canopyFromUrl && capacityFromUrl) {
-      autoCalculate(brandFromUrl, canopyFromUrl, capacityFromUrl);
+  // ── 3. When canopy pre-filled from URL, load its capacities ──────────────
+  useEffect(() => {
+    const brandId  = searchParams.get("brand_id");
+    const canopyId = searchParams.get("canopy_id");
+    if (!brandId || !canopyId || loadingCanopy) return;
+    fetchCapacities(brandId, canopyId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingCanopy]);
+
+  // ── 4. Auto-calculate when all 3 params come from URL ────────────────────
+  useEffect(() => {
+    const brandId   = searchParams.get("brand_id");
+    const canopyId  = searchParams.get("canopy_id");
+    const capacityKva = searchParams.get("capacity_kva");
+    if (!loadingBrands && brandId && canopyId && capacityKva) {
+      autoCalculate(brandId, canopyId, capacityKva);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+  }, [loadingBrands]);
 
-  const autoCalculate = async (
-    brand_id: string,
-    canopy_id: string,
-    capacity_kva: string
-  ) => {
+  // ── Fetch helpers ─────────────────────────────────────────────────────────
+  const fetchCanopies = async (brandId: string) => {
+    setLoadingCanopy(true);
+    setCanopyOptions([]);
+    setCapacityOptions([]);
+    try {
+      const res  = await fetch(`${API.priceMappingCanopies}?brand_id=${brandId}`);
+      const data = await res.json();
+      setCanopyOptions(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCanopy(false);
+    }
+  };
+
+  const fetchCapacities = async (brandId: string, canopyId: string) => {
+    setLoadingCapacity(true);
+    setCapacityOptions([]);
+    try {
+      const res  = await fetch(`${API.priceMappingCapacities}?brand_id=${brandId}&canopy_id=${canopyId}`);
+      const data = await res.json();
+      setCapacityOptions(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCapacity(false);
+    }
+  };
+
+  // ── Dropdown handlers ─────────────────────────────────────────────────────
+  const handleBrandChange = (brandId: string) => {
+    setSelectedBrand(brandId);
+    setSelectedCanopy("");
+    setSelectedCapacity("");
+    setCanopyOptions([]);
+    setCapacityOptions([]);
+    if (brandId) fetchCanopies(brandId);
+  };
+
+  const handleCanopyChange = (canopyId: string) => {
+    setSelectedCanopy(canopyId);
+    setSelectedCapacity("");
+    setCapacityOptions([]);
+    if (canopyId) fetchCapacities(selectedBrand, canopyId);
+  };
+
+  // ── Auto-calculate (from URL params) ─────────────────────────────────────
+  const autoCalculate = async (brand_id: string, canopy_id: string, capacity_kva: string) => {
     setCalculating(true);
     try {
-      const response = await fetch(API.calculate, {
-        method: "POST",
+      const res  = await fetch(API.calculate, {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_id, canopy_id, capacity_kva }),
+        body:    JSON.stringify({ brand_id, canopy_id, capacity_kva }),
       });
-      const data: PriceResult = await response.json();
+      const data: PriceResult = await res.json();
       setPriceResult(data);
     } catch (err) {
       console.error("Auto-calculate error:", err);
@@ -149,7 +165,7 @@ function MachineryValuationWizardInner() {
     }
   };
 
-  // Format currency helper
+  // ── Format currency ───────────────────────────────────────────────────────
   const formatCurrency = (value: number | string | null | undefined) => {
     if (value === null || value === undefined) return "₹0";
     const num = typeof value === "string" ? parseFloat(value) : value;
@@ -157,73 +173,62 @@ function MachineryValuationWizardInner() {
     return `₹${num.toLocaleString("en-IN")}`;
   };
 
-  // Step 1 → validate & get base price, advance to step 2
+  // ── Step 1 → Next ─────────────────────────────────────────────────────────
   const handleStep1Next = async () => {
     if (!selectedBrand || !selectedCanopy || !selectedCapacity) {
       setCalcError("Please select Brand, Canopy/Model, and Capacity.");
       return;
     }
-
     setCalcError(null);
     setCalculating(true);
-
     try {
-      const response = await fetch(API.calculate, {
-        method: "POST",
+      const res  = await fetch(API.calculate, {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand_id: selectedBrand,
-          canopy_id: selectedCanopy,
+        body:    JSON.stringify({
+          brand_id:     selectedBrand,
+          canopy_id:    selectedCanopy,
           capacity_kva: selectedCapacity,
         }),
       });
-
-      const data: PriceResult = await response.json();
+      const data: PriceResult = await res.json();
       setPriceResult(data);
-
-      if (!data.status) {
-        setCalcError(data.message || "Price not found for selected options.");
-      }
+      if (!data.status) setCalcError(data.message || "Price not found for selected options.");
     } catch (err) {
-      console.error("Calculate error:", err);
+      console.error(err);
       setCalcError("Failed to fetch price. Please try again.");
     } finally {
       setCalculating(false);
     }
-
     setStep(2);
   };
 
-  // Step 2 → re-call with year + hours + engine condition to get estimated_price
+  // ── Step 2 → Next ─────────────────────────────────────────────────────────
   const handleStep2Next = async () => {
     setCalcError(null);
     setCalculating(true);
-
     try {
       const body: Record<string, string> = {
-        brand_id: selectedBrand,
-        canopy_id: selectedCanopy,
+        brand_id:     selectedBrand,
+        canopy_id:    selectedCanopy,
         capacity_kva: selectedCapacity,
       };
-      if (selectedYear) body.make_year = selectedYear;
-      if (selectedHours) body.running_hours = selectedHours;
-      if (selectedEngineCondition)
-        body.engine_condition = selectedEngineCondition;
+      if (selectedYear)            body.make_year         = selectedYear;
+      if (selectedHours)           body.running_hours     = selectedHours;
+      if (selectedEngineCondition) body.engine_condition  = selectedEngineCondition;
 
-      const response = await fetch(API.calculate, {
-        method: "POST",
+      const res  = await fetch(API.calculate, {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body:    JSON.stringify(body),
       });
-
-      const data: PriceResult = await response.json();
+      const data: PriceResult = await res.json();
       setPriceResult(data);
     } catch (err) {
-      console.error("Step 2 calculate error:", err);
+      console.error(err);
     } finally {
       setCalculating(false);
     }
-
     setStep(3);
   };
 
@@ -234,77 +239,50 @@ function MachineryValuationWizardInner() {
     (_, i) => `${2000 + i}`
   ).reverse();
 
+  // ── Image handling ────────────────────────────────────────────────────────
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const remainingSlots = 3 - uploadedImages.length;
-    const newFiles = Array.from(files).slice(0, remainingSlots);
-    const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
-    setUploadedImages((prev) => [...prev, ...newFiles]);
-    setUploadedPreviews((prev) => [...prev, ...newPreviews]);
+    const remaining = 3 - uploadedImages.length;
+    const newFiles  = Array.from(files).slice(0, remaining);
+    setUploadedImages((prev)   => [...prev, ...newFiles]);
+    setUploadedPreviews((prev) => [...prev, ...newFiles.map((f) => URL.createObjectURL(f))]);
   };
 
   const removeImage = (index: number) => {
-    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+    setUploadedImages((prev)   => prev.filter((_, i) => i !== index));
     setUploadedPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Step 3 — submit all data to backend
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setSubmitError(null);
     setSubmitting(true);
-
     try {
-      const formData = new FormData();
+      const fd = new FormData();
+      fd.append("name",            nameFromUrl);
+      fd.append("phone",           phoneFromUrl);
+      fd.append("machine_type_id", MACHINE_TYPE_ID);   // always 1
+      fd.append("brand_id",        selectedBrand);
+      fd.append("canopy_id",       selectedCanopy);
+      fd.append("capacity_kva",    selectedCapacity);
+      if (selectedYear)            fd.append("make_year",         selectedYear);
+      if (selectedHours)           fd.append("running_hours",     selectedHours);
+      if (selectedEngineCondition) fd.append("engine_condition",  selectedEngineCondition);
+      if (priceResult?.price_new       != null) fd.append("price_new",       String(priceResult.price_new));
+      if (priceResult?.day2_price      != null) fd.append("day2_price",      String(priceResult.day2_price));
+      if (priceResult?.estimated_price != null) fd.append("estimated_price", String(priceResult.estimated_price));
+      if (priceResult?.year_factor     != null) fd.append("year_factor",     String(priceResult.year_factor));
+      if (priceResult?.hours_factor    != null) fd.append("hours_factor",    String(priceResult.hours_factor));
+      if (priceResult?.engine_factor   != null) fd.append("engine_factor",   String(priceResult.engine_factor));
+      uploadedImages.forEach((f) => fd.append("images[]", f));
 
-      formData.append("name", nameFromUrl);
-      formData.append("phone", phoneFromUrl);
-
-      if (selectedMachineType)
-        formData.append("machine_type_id", selectedMachineType);
-      formData.append("brand_id", selectedBrand);
-      formData.append("canopy_id", selectedCanopy);
-      formData.append("capacity_kva", selectedCapacity);
-
-      if (selectedYear) formData.append("make_year", selectedYear);
-      if (selectedHours) formData.append("running_hours", selectedHours);
-      if (selectedEngineCondition)
-        formData.append("engine_condition", selectedEngineCondition);
-
-      if (priceResult?.price_new != null)
-        formData.append("price_new", String(priceResult.price_new));
-      if (priceResult?.day2_price != null)
-        formData.append("day2_price", String(priceResult.day2_price));
-      if (priceResult?.estimated_price != null)
-        formData.append(
-          "estimated_price",
-          String(priceResult.estimated_price)
-        );
-      if (priceResult?.year_factor != null)
-        formData.append("year_factor", String(priceResult.year_factor));
-      if (priceResult?.hours_factor != null)
-        formData.append("hours_factor", String(priceResult.hours_factor));
-      if (priceResult?.engine_factor != null)
-        formData.append("engine_factor", String(priceResult.engine_factor));
-
-      uploadedImages.forEach((file) => {
-        formData.append("images[]", file);
-      });
-
-      const response = await fetch(API.valuationSubmit, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.status) {
-        setSubmitSuccess(true);
-      } else {
-        setSubmitError(data.message || "Submission failed. Please try again.");
-      }
+      const res  = await fetch(API.valuationSubmit, { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.status) setSubmitSuccess(true);
+      else setSubmitError(data.message || "Submission failed. Please try again.");
     } catch (err) {
-      console.error("Submit error:", err);
+      console.error(err);
       setSubmitError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
@@ -315,7 +293,7 @@ function MachineryValuationWizardInner() {
     <div className="w-full h-12 rounded-xl bg-gray-100 animate-pulse" />
   );
 
-  // Success screen
+  // ── Success screen ────────────────────────────────────────────────────────
   if (submitSuccess) {
     return (
       <section className="min-h-screen py-14 bg-gradient-to-b from-white to-orange-50/40 flex items-center justify-center">
@@ -323,16 +301,13 @@ function MachineryValuationWizardInner() {
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-[#1a1a1a] mb-3">
-            Request Submitted!
-          </h2>
+          <h2 className="text-2xl font-bold text-[#1a1a1a] mb-3">Request Submitted!</h2>
           <p className="text-gray-500 text-sm mb-6">
-            Thank you, {nameFromUrl || "there"}! Our team will reach out to you
-            at {phoneFromUrl || "your number"} shortly with your valuation
-            report.
+            Thank you, {nameFromUrl || "there"}! Our team will reach out to you at{" "}
+            {phoneFromUrl || "your number"} shortly with your valuation report.
           </p>
-          <a
-            href="/"
+          
+          <a  href="/"
             className="inline-flex items-center justify-center h-12 px-8 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition"
           >
             Back to Home
@@ -346,29 +321,24 @@ function MachineryValuationWizardInner() {
     <section className="min-h-screen py-14 bg-gradient-to-b from-white to-orange-50/40 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+
           {/* LEFT FORM */}
           <div className="flex flex-col">
             {/* Stepper */}
             <div className="flex items-center flex-wrap gap-4 mb-6">
-              {["Machine Type", "Condition", "Images"].map((label, index) => {
+              {["Machine Details", "Condition", "Images"].map((label, index) => {
                 const current = index + 1;
                 return (
                   <div key={label} className="flex items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition ${
-                        step === current
-                          ? "bg-[#f07020] text-white shadow-lg"
-                          : "bg-white border border-orange-100 text-gray-600"
-                      }`}
-                    >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition ${
+                      step === current
+                        ? "bg-[#f07020] text-white shadow-lg"
+                        : "bg-white border border-orange-100 text-gray-600"
+                    }`}>
                       {current}
                     </div>
-                    <span className="ml-3 text-sm font-medium text-gray-700">
-                      {label}
-                    </span>
-                    {current < 3 && (
-                      <div className="w-10 h-[2px] bg-orange-200 mx-4" />
-                    )}
+                    <span className="ml-3 text-sm font-medium text-gray-700">{label}</span>
+                    {current < 3 && <div className="w-10 h-[2px] bg-orange-200 mx-4" />}
                   </div>
                 );
               })}
@@ -376,34 +346,30 @@ function MachineryValuationWizardInner() {
 
             {/* Main Card */}
             <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-sm flex-1">
-              {/* STEP 1 */}
+
+              {/* ── STEP 1 ── */}
               {step === 1 && (
                 <>
-                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
-                    Price Calculator
-                  </h2>
+                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">Price Calculator</h2>
                   <div className="space-y-5">
-                    {/* Machine Type */}
+
+                    {/* BRAND */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Machine Type
+                        Brand <span className="text-red-500">*</span>
                       </label>
-                      {loading ? (
-                        <SelectSkeleton />
-                      ) : (
+                      {loadingBrands ? <SelectSkeleton /> : (
                         <div className="relative">
                           <select
-                            value={selectedMachineType}
-                            onChange={(e) =>
-                              setSelectedMachineType(e.target.value)
-                            }
-                            className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
+                            value={selectedBrand}
+                            onChange={(e) => handleBrandChange(e.target.value)}
+                            className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white ${
+                              calcError && !selectedBrand ? "border-red-400" : "border-gray-200"
+                            }`}
                           >
-                            <option value="">Select Machine Type</option>
-                            {machineTypes.map((type) => (
-                              <option key={type.id} value={type.id}>
-                                {type.name}
-                              </option>
+                            <option value="">Select Brand</option>
+                            {brands.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name}</option>
                             ))}
                           </select>
                           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -411,100 +377,49 @@ function MachineryValuationWizardInner() {
                       )}
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {/* Brand */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          Brand <span className="text-red-500">*</span>
-                        </label>
-                        {loading ? (
-                          <SelectSkeleton />
-                        ) : (
-                          <div className="relative">
-                            <select
-                              value={selectedBrand}
-                              onChange={(e) =>
-                                setSelectedBrand(e.target.value)
-                              }
-                              className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white ${
-                                calcError && !selectedBrand
-                                  ? "border-red-400"
-                                  : "border-gray-200"
-                              }`}
-                            >
-                              <option value="">Select Brand</option>
-                              {brands.map((brand) => (
-                                <option key={brand.id} value={brand.id}>
-                                  {brand.name}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Canopy / Model */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          Canopy / Model{" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        {loading ? (
-                          <SelectSkeleton />
-                        ) : (
-                          <div className="relative">
-                            <select
-                              value={selectedCanopy}
-                              onChange={(e) =>
-                                setSelectedCanopy(e.target.value)
-                              }
-                              className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white ${
-                                calcError && !selectedCanopy
-                                  ? "border-red-400"
-                                  : "border-gray-200"
-                              }`}
-                            >
-                              <option value="">Select Option</option>
-                              <optgroup label="Canopy Type">
-                                {canopies.map((item) => (
-                                  <option key={item.id} value={item.id}>
-                                    {item.name}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-                          </div>
-                        )}
-                      </div>
+                    {/* CANOPY */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Canopy / Model <span className="text-red-500">*</span>
+                      </label>
+                      {loadingCanopy ? <SelectSkeleton /> : (
+                        <div className="relative">
+                          <select
+                            value={selectedCanopy}
+                            onChange={(e) => handleCanopyChange(e.target.value)}
+                            disabled={!selectedBrand}
+                            className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white disabled:opacity-50 ${
+                              calcError && !selectedCanopy ? "border-red-400" : "border-gray-200"
+                            }`}
+                          >
+                            <option value="">Select Canopy Type</option>
+                            {canopyOptions.map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        </div>
+                      )}
                     </div>
 
-                    {/* Capacity */}
+                    {/* CAPACITY */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
                         Capacity <span className="text-red-500">*</span>
                       </label>
-                      {loading ? (
-                        <SelectSkeleton />
-                      ) : (
+                      {loadingCapacity ? <SelectSkeleton /> : (
                         <div className="relative">
                           <select
                             value={selectedCapacity}
-                            onChange={(e) =>
-                              setSelectedCapacity(e.target.value)
-                            }
-                            className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white ${
-                              calcError && !selectedCapacity
-                                ? "border-red-400"
-                                : "border-gray-200"
+                            onChange={(e) => setSelectedCapacity(e.target.value)}
+                            disabled={!selectedCanopy}
+                            className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white disabled:opacity-50 ${
+                              calcError && !selectedCapacity ? "border-red-400" : "border-gray-200"
                             }`}
                           >
                             <option value="">Select Capacity</option>
-                            {capacities.map((cap) => (
-                              <option key={cap.id} value={cap.kva}>
-                                {cap.kva} KVA
-                              </option>
+                            {capacityOptions.map((cap) => (
+                              <option key={cap.kva} value={cap.kva}>{cap.kva} KVA</option>
                             ))}
                           </select>
                           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -512,39 +427,26 @@ function MachineryValuationWizardInner() {
                       )}
                     </div>
 
-                    {calcError && (
-                      <p className="text-sm text-red-500 -mt-1">{calcError}</p>
-                    )}
+                    {calcError && <p className="text-sm text-red-500 -mt-1">{calcError}</p>}
 
                     <button
                       onClick={handleStep1Next}
                       disabled={calculating}
                       className="w-full h-12 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {calculating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Calculating...
-                        </>
-                      ) : (
-                        "Next"
-                      )}
+                      {calculating ? <><Loader2 className="w-4 h-4 animate-spin" />Calculating...</> : "Next"}
                     </button>
                   </div>
                 </>
               )}
 
-              {/* STEP 2 */}
+              {/* ── STEP 2 ── */}
               {step === 2 && (
                 <>
-                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
-                    What is the machinery condition?
-                  </h2>
+                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">What is the machinery condition?</h2>
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Year of Purchase
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">Year of Purchase</label>
                       <div className="relative">
                         <select
                           value={selectedYear}
@@ -553,9 +455,7 @@ function MachineryValuationWizardInner() {
                         >
                           <option value="">Select Year</option>
                           {years.map((year) => (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
+                            <option key={year} value={year}>{year}</option>
                           ))}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -563,9 +463,7 @@ function MachineryValuationWizardInner() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Running Hours
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">Running Hours</label>
                       <div className="relative">
                         <select
                           value={selectedHours}
@@ -588,15 +486,11 @@ function MachineryValuationWizardInner() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Engine Condition
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">Engine Condition</label>
                       <div className="relative">
                         <select
                           value={selectedEngineCondition}
-                          onChange={(e) =>
-                            setSelectedEngineCondition(e.target.value)
-                          }
+                          onChange={(e) => setSelectedEngineCondition(e.target.value)}
                           className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
                         >
                           <option value="">Select Engine Condition</option>
@@ -621,27 +515,17 @@ function MachineryValuationWizardInner() {
                         disabled={calculating}
                         className="w-full h-12 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        {calculating ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Calculating...
-                          </>
-                        ) : (
-                          "Next"
-                        )}
+                        {calculating ? <><Loader2 className="w-4 h-4 animate-spin" />Calculating...</> : "Next"}
                       </button>
                     </div>
                   </div>
                 </>
               )}
 
-              {/* STEP 3 */}
+              {/* ── STEP 3 ── */}
               {step === 3 && (
                 <>
-                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
-                    Upload Machinery Images
-                  </h2>
-
+                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">Upload Machinery Images</h2>
                   <div className="border-2 border-dashed border-orange-200 rounded-3xl p-8 text-center bg-orange-50/30">
                     <input
                       type="file"
@@ -651,19 +535,12 @@ function MachineryValuationWizardInner() {
                       className="hidden"
                       id="machinery-upload"
                     />
-                    <label
-                      htmlFor="machinery-upload"
-                      className="cursor-pointer block"
-                    >
+                    <label htmlFor="machinery-upload" className="cursor-pointer block">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#f07020] to-[#ff9b5e] flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <Upload className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-gray-700 font-medium mb-2">
-                        Upload up to 3 machinery images
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Clear images improve valuation accuracy
-                      </p>
+                      <p className="text-gray-700 font-medium mb-2">Upload up to 3 machinery images</p>
+                      <p className="text-sm text-gray-500 mb-4">Clear images improve valuation accuracy</p>
                       <span className="inline-flex h-11 px-6 items-center justify-center bg-[#f07020] text-white rounded-xl font-medium hover:bg-[#d85f14] transition">
                         Choose Images
                       </span>
@@ -673,19 +550,9 @@ function MachineryValuationWizardInner() {
                   {uploadedPreviews.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                       {uploadedPreviews.map((preview, index) => (
-                        <div
-                          key={index}
-                          className="relative rounded-2xl overflow-hidden border border-orange-100"
-                        >
-                          <img
-                            src={preview}
-                            alt={`Upload ${index + 1}`}
-                            className="w-full h-28 object-cover"
-                          />
-                          <button
-                            onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 bg-white/90 rounded-full p-1 shadow"
-                          >
+                        <div key={index} className="relative rounded-2xl overflow-hidden border border-orange-100">
+                          <img src={preview} alt={`Upload ${index + 1}`} className="w-full h-28 object-cover" />
+                          <button onClick={() => removeImage(index)} className="absolute top-2 right-2 bg-white/90 rounded-full p-1 shadow">
                             <X className="w-4 h-4 text-gray-700" />
                           </button>
                         </div>
@@ -693,9 +560,7 @@ function MachineryValuationWizardInner() {
                     </div>
                   )}
 
-                  {submitError && (
-                    <p className="text-sm text-red-500 mt-4">{submitError}</p>
-                  )}
+                  {submitError && <p className="text-sm text-red-500 mt-4">{submitError}</p>}
 
                   <div className="flex gap-3 pt-6">
                     <button
@@ -710,14 +575,7 @@ function MachineryValuationWizardInner() {
                       disabled={submitting}
                       className="w-full h-12 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        "Get Price Estimate"
-                      )}
+                      {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Submitting...</> : "Get Price Estimate"}
                     </button>
                   </div>
                 </>
@@ -725,216 +583,131 @@ function MachineryValuationWizardInner() {
             </div>
           </div>
 
-          {/* RIGHT SIDE */}
-          <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-sm h-full flex flex-col">
-            {/* Estimated Range */}
-            <div className="order-1 lg:order-2 mt-0 lg:mt-auto bg-gradient-to-b from-white to-orange-50/40 rounded-3xl p-6 border border-orange-100 mb-8 lg:mb-0">
-              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-2">
-                Estimated Market Range
-              </h3>
+         {/* RIGHT SIDE */}
+<div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-sm h-full flex flex-col">
 
-              {calculating && (
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#f07020]" />
-                  Fetching price estimate...
-                </div>
-              )}
+  {/* PRICE RANGE CARD */}
+  <div className="order-1 lg:order-2 mt-0 lg:mt-auto bg-gradient-to-b from-white to-orange-50/40 rounded-3xl p-8 border border-orange-100 mb-8 lg:mb-0">
 
-              {!calculating && priceResult && !priceResult.status && (
-                <p className="text-sm text-red-500 mb-4">
-                  {priceResult.message ||
-                    "Price not found for selected options."}
-                </p>
-              )}
+    <h3 className="text-3xl font-bold text-[#1a1a1a] mb-8">
+      Evaluation Range
+    </h3>
 
-              {!calculating && priceResult?.status && step === 1 && (
-                <>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Base market price for selected model
-                  </p>
-                  <div className="flex justify-between text-lg font-semibold text-gray-900 mb-3">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-400 font-normal mb-0.5">
-                        New Price ({priceResult.year})
-                      </span>
-                      <span className="text-[#f07020]">
-                        {formatCurrency(priceResult.price_new)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs text-gray-400 font-normal mb-0.5">
-                        Day 2 Price
-                      </span>
-                      <span>{formatCurrency(priceResult.day2_price)}</span>
-                    </div>
-                  </div>
-                  <div className="h-2 rounded-full bg-gradient-to-r from-yellow-400 via-green-500 to-[#f07020]" />
-                  <p className="text-xs text-gray-400 mt-3">
-                    Complete Step 2 to refine with age &amp; hours.
-                  </p>
-                </>
-              )}
+    {calculating && (
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        <Loader2 className="w-4 h-4 animate-spin text-[#f07020]" />
+        Fetching price estimate...
+      </div>
+    )}
 
-              {!calculating && priceResult?.status && step >= 2 && (
-                <>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Adjusted for age, usage &amp; condition
-                  </p>
-                  <div className="flex justify-between text-sm text-gray-700 mb-2">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-400 mb-0.5">
-                        New Price ({priceResult.year})
-                      </span>
-                      <span className="font-semibold">
-                        {formatCurrency(priceResult.price_new)}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs text-gray-400 mb-0.5">
-                        Day 2 Price
-                      </span>
-                      <span className="font-semibold">
-                        {formatCurrency(priceResult.day2_price)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="h-px bg-orange-100 my-3" />
-                  {priceResult.estimated_price &&
-                    (() => {
-                      const est =
-                        typeof priceResult.estimated_price === "string"
-                          ? parseFloat(priceResult.estimated_price)
-                          : Number(priceResult.estimated_price);
-                      const low = Math.round(est * 0.9);
-                      const high = Math.round(est * 1.1);
-                      return (
-                        <div className="bg-orange-50 rounded-2xl px-4 py-4 mb-3">
-                          <p className="text-xs text-gray-500 mb-3">
-                            Estimated Resale Value
-                          </p>
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 bg-white rounded-xl px-4 py-3 border border-orange-100 text-center">
-                              <p className="text-xs text-gray-400 mb-1">
-                                Min Price
-                              </p>
-                              <p className="text-lg font-bold text-gray-800">
-                                {formatCurrency(low)}
-                              </p>
-                              <div className="flex justify-center mt-1">
-                                <svg
-                                  width="14"
-                                  height="8"
-                                  viewBox="0 0 14 8"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M7 8L0 0H14L7 8Z"
-                                    fill="#f07020"
-                                    opacity="0.5"
-                                  />
-                                </svg>
-                              </div>
-                            </div>
-                            <span className="text-gray-300 font-light text-xl">
-                              —
-                            </span>
-                            <div className="flex-1 bg-white rounded-xl px-4 py-3 border border-orange-100 text-center">
-                              <p className="text-xs text-gray-400 mb-1">
-                                Max Price
-                              </p>
-                              <p className="text-lg font-bold text-[#f07020]">
-                                {formatCurrency(high)}
-                              </p>
-                              <div className="flex justify-center mt-1">
-                                <svg
-                                  width="14"
-                                  height="8"
-                                  viewBox="0 0 14 8"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M7 8L0 0H14L7 8Z"
-                                    fill="#f07020"
-                                  />
-                                </svg>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right text-xs text-gray-400 space-y-0.5 mt-3">
-                            {priceResult.year_factor && (
-                              <p>
-                                Age: ×{priceResult.year_factor.toFixed(2)}
-                              </p>
-                            )}
-                            {priceResult.hours_factor && (
-                              <p>
-                                Hours: ×{priceResult.hours_factor.toFixed(2)}
-                              </p>
-                            )}
-                            {priceResult.engine_factor && (
-                              <p>
-                                Engine:{" "}
-                                ×{priceResult.engine_factor.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  <div className="h-2 rounded-full bg-gradient-to-r from-yellow-400 via-green-500 to-[#f07020]" />
-                  <p className="text-xs text-gray-400 mt-3">
-                    Final price subject to physical inspection.
-                  </p>
-                </>
-              )}
+    {!calculating && priceResult?.estimated_price && (() => {
 
-              {!calculating && !priceResult && (
-                <>
-                  <div className="flex justify-between text-lg font-semibold mb-3">
-                    <span className="text-gray-200">₹—</span>
-                    <span className="text-gray-200">₹—</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-gray-100" />
-                  <p className="text-sm text-gray-400 mt-3">
-                    Complete Step 1 to see price estimate.
-                  </p>
-                </>
-              )}
+      const est = typeof priceResult.estimated_price === "string"
+        ? parseFloat(priceResult.estimated_price)
+        : Number(priceResult.estimated_price);
+
+      const low  = Math.round(est * 0.9);
+      const high = Math.round(est * 1.1);
+
+      return (
+        <div className="relative px-2">
+
+          {/* PRICES */}
+          <div className="flex justify-between items-end mb-5">
+
+            {/* MIN */}
+            <div className="text-center">
+              <p className="text-3xl font-bold text-[#1a1a1a]">
+                {formatCurrency(low)}
+              </p>
+
+              <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px]
+              border-l-transparent border-r-transparent border-t-[#444] mx-auto mt-2" />
             </div>
 
-            {/* Why Choose Us */}
-            <div className="order-2 lg:order-1 mb-8 lg:mb-0">
-              <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
-                Why Choose Us?
-              </h2>
-              <div className="space-y-5">
-                {[
-                  "Hassle-Free Machinery Selling Experience",
-                  "No Commission, No Brokerage",
-                  "Free On-Site Inspection",
-                  "Real-Time Market Linked Pricing",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#f07020] mt-0.5" />
-                    <span className="text-gray-700 text-base leading-relaxed">
-                      {item}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            {/* MAX */}
+            <div className="text-center">
+              <p className="text-3xl font-bold text-[#1a1a1a]">
+                {formatCurrency(high)}
+              </p>
+
+              <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px]
+              border-l-transparent border-r-transparent border-t-[#444] mx-auto mt-2" />
             </div>
+
           </div>
+
+          {/* RANGE BAR */}
+          <div className="h-1 rounded-full bg-gradient-to-r from-lime-400 via-yellow-400 to-red-600" />
+
+        </div>
+      );
+    })()}
+
+    {!calculating && !priceResult?.estimated_price && (
+      <div className="relative px-2">
+
+        <div className="flex justify-between items-end mb-5">
+
+          <div className="text-center">
+            <p className="text-3xl font-bold text-gray-300">₹—</p>
+
+            <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px]
+            border-l-transparent border-r-transparent border-t-gray-300 mx-auto mt-2" />
+          </div>
+
+          <div className="text-center">
+            <p className="text-3xl font-bold text-gray-300">₹—</p>
+
+            <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px]
+            border-l-transparent border-r-transparent border-t-gray-300 mx-auto mt-2" />
+          </div>
+
+        </div>
+
+        <div className="h-1 rounded-full bg-gray-200" />
+
+      </div>
+    )}
+
+  </div>
+
+  {/* WHY CHOOSE US */}
+  <div className="order-2 lg:order-1 mb-8 lg:mb-0">
+
+    <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
+      Why Choose Us?
+    </h2>
+
+    <div className="space-y-5">
+      {[
+        "Hassle-Free Machinery Selling Experience",
+        "No Commission, No Brokerage",
+        "Free On-Site Inspection",
+        "Real-Time Market Linked Pricing",
+      ].map((item) => (
+        <div key={item} className="flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-[#f07020] mt-0.5" />
+          <span className="text-gray-700 text-base leading-relaxed">
+            {item}
+          </span>
+        </div>
+      ))}
+    </div>
+
+  </div>
+
+</div>
+
         </div>
       </div>
 
-      {/* Decorative Blur */}
       <div className="absolute top-0 right-0 w-72 h-72 bg-[#f07020]/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-200/20 rounded-full blur-3xl pointer-events-none" />
     </section>
   );
 }
 
-// ─── Loading fallback ─────────────────────────────────────────────────────────
 function WizardFallback() {
   return (
     <section className="min-h-screen py-14 bg-gradient-to-b from-white to-orange-50/40 flex items-center justify-center">
@@ -946,7 +719,6 @@ function WizardFallback() {
   );
 }
 
-// ─── Public export — wrapped in Suspense ─────────────────────────────────────
 export default function MachineryValuationWizard() {
   return (
     <Suspense fallback={<WizardFallback />}>

@@ -2,15 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { API } from "@/lib/api";
 
 const heroSlides = [
   {
     image: "/assets/img/hero-banner1.png",
-    badge: "India’s Trusted Industrial Marketplace",
+    badge: "India's Trusted Industrial Marketplace",
     title:
       "Sell Your Used DG Sets & Industrial Machinery at the Best Market Price",
-    desc: "Get instant price estimates, verified offers, and GST-compliant payouts through India’s most trusted machinery resale platform.",
+    desc: "Get instant price estimates, verified offers, and GST-compliant payouts through India's most trusted machinery resale platform.",
     points: [
       "Best Market Rates",
       "Zero Brokerage",
@@ -21,7 +23,8 @@ const heroSlides = [
   {
     image: "/assets/img/hero-banner2.jpg",
     badge: "Verified Machinery Buyers Across India",
-    title: "Upgrade or Sell Heavy Equipment Quickly With Transparent Valuation",
+    title:
+      "Upgrade or Sell Heavy Equipment Quickly With Transparent Valuation",
     desc: "Connect with serious industrial buyers, get accurate inspections, and secure the best possible resale value without delays.",
     points: [
       "Verified Buyers",
@@ -33,7 +36,8 @@ const heroSlides = [
   {
     image: "/assets/img/hero-banner3.png",
     badge: "Fast, Secure & Reliable",
-    title: "Turn Idle Machinery Into Instant Capital With Hassle-Free Selling",
+    title:
+      "Turn Idle Machinery Into Instant Capital With Hassle-Free Selling",
     desc: "From generators to industrial machines, unlock working capital with seamless pickup, secure payment, and end-to-end support.",
     points: [
       "Secure Transactions",
@@ -44,47 +48,64 @@ const heroSlides = [
   },
 ];
 
-const machineTypes = [
-  "Diesel Generator",
-  "Industrial Generator",
-  "Silent DG Set",
-  "Gas Generator",
-  "Heavy Machinery",
-];
-
-const brands = [
-  "Caterpillar",
-  "Cummins",
-  "Kirloskar",
-  "Mahindra Powerol",
-  "Ashok Leyland",
-];
-
-const models = [
-  "CAT DG 125 KVA",
-  "Cummins C250D5",
-  "Kirloskar KG1-62.5",
-  "Mahindra MPower 160",
-  "AL DG 250",
-];
-const capacities = [
-  "15 KVA",
-  "25 KVA",
-  "62.5 KVA",
-  "125 KVA",
-  "250 KVA",
-  "500 KVA",
-  "1000 KVA",
-];
-
-const canopyTypes = [
-  "Silent Canopy",
-  "Open Type",
-  "Acoustic Enclosure",
-];
-
 export default function Hero() {
+  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
+
+  const [machineTypes, setMachineTypes] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [capacities, setCapacities] = useState<any[]>([]);
+  const [canopies, setCanopies] = useState<any[]>([]);
+
+  // Calculator selections
+  const [selectedMachineType, setSelectedMachineType] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedCanopy, setSelectedCanopy] = useState("");
+  const [selectedCapacity, setSelectedCapacity] = useState("");
+
+  // Modal fields
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    fetch(API.machineTypes)
+      .then((res) => res.json())
+      .then((data) => setMachineTypes(data))
+      .catch((err) => console.log(err));
+
+    fetch(API.brands)
+      .then((res) => res.json())
+      .then((data) => setBrands(data))
+      .catch((err) => console.log(err));
+
+    fetch(API.capacities)
+      .then((res) => res.json())
+      .then((data) => setCapacities(data))
+      .catch((err) => console.log(err));
+
+    fetch(API.canopies)
+      .then((res) => res.json())
+      .then((data) => setCanopies(data))
+      .catch((err) => console.log(err));
+  }, []);
+
+  // Build query string from selected values and open modal
+  const handleCalculateClick = () => {
+    setShowModal(true);
+  };
+
+  // On modal "Proceed" — navigate with query params including name & phone
+  const handleProceed = () => {
+    const params = new URLSearchParams();
+    if (selectedMachineType) params.set("machine_type_id", selectedMachineType);
+    if (selectedBrand) params.set("brand_id", selectedBrand);
+    if (selectedCanopy) params.set("canopy_id", selectedCanopy);
+    if (selectedCapacity) params.set("capacity_kva", selectedCapacity);
+    if (name) params.set("name", name);
+    if (phone) params.set("phone", phone);
+
+    router.push(`/machinery-valuation?${params.toString()}`);
+  };
 
   return (
     <section className="relative min-h-[85vh] flex items-center overflow-hidden">
@@ -111,7 +132,7 @@ export default function Hero() {
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 w-full">
         <div className="flex flex-col lg:flex-row gap-16 items-center">
-          {/* LEFT CALCULATOR (STATIC) */}
+          {/* LEFT CALCULATOR */}
           <div className="lg:w-[30%] w-full flex-shrink-0">
             <div className="bg-white rounded-3xl shadow-2xl p-6 border border-white/20 backdrop-blur-sm">
               <h3 className="font-heading text-2xl font-bold text-[#1a1a1a] mb-4">
@@ -124,59 +145,63 @@ export default function Hero() {
 
               <div className="space-y-4">
                 {/* Machine Type */}
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
+                <select
+                  value={selectedMachineType}
+                  onChange={(e) => setSelectedMachineType(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white"
+                >
                   <option value="">Machine Type</option>
                   {machineTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                    <option key={type.id} value={type.id}>
+                      {type.name}
                     </option>
                   ))}
                 </select>
 
                 {/* Brand */}
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white"
+                >
                   <option value="">Brand</option>
                   {brands.map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand}
+                    <option key={brand.id} value={brand.id}>
+                      {brand.name}
                     </option>
                   ))}
                 </select>
 
-                {/* Canopy / Model */}
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
-                  <option value="">Canopy / Model</option>
-
-                  <optgroup label="Canopy Type">
-                    {canopyTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </optgroup>
-
-                  <optgroup label="Models">
-                    {models.map((model) => (
-                      <option key={model} value={model}>
-                        {model}
-                      </option>
-                    ))}
-                  </optgroup>
+                {/* Canopy */}
+                <select
+                  value={selectedCanopy}
+                  onChange={(e) => setSelectedCanopy(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white"
+                >
+                  <option value="">Canopy Type</option>
+                  {canopies.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
                 </select>
 
                 {/* Capacity */}
-                <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white">
+                <select
+                  value={selectedCapacity}
+                  onChange={(e) => setSelectedCapacity(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white"
+                >
                   <option value="">Capacity</option>
                   {capacities.map((cap) => (
-                    <option key={cap} value={cap}>
-                      {cap}
+                    <option key={cap.id} value={cap.kva}>
+                      {cap.kva} KVA
                     </option>
                   ))}
                 </select>
 
-             
                 <button
-                  onClick={() => setShowModal(true)}
+                  onClick={handleCalculateClick}
                   className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition"
                 >
                   Calculate Price
@@ -192,7 +217,7 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* RIGHT CONTENT (CHANGING) */}
+          {/* RIGHT CONTENT */}
           <div className="lg:w-[70%] w-full relative min-h-[420px]">
             <div className="content-slider">
               {heroSlides.map((slide, index) => (
@@ -263,20 +288,25 @@ export default function Hero() {
               <input
                 type="text"
                 placeholder="Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none"
               />
 
               <input
                 type="tel"
                 placeholder="Phone Number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none"
               />
 
-              <Link href="/machinery-valuation">
-                <button className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition">
-                  Proceed
-                </button>
-              </Link>
+              <button
+                onClick={handleProceed}
+                className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition"
+              >
+                Proceed
+              </button>
             </div>
           </div>
         </div>

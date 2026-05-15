@@ -2,12 +2,45 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
-import { blogData } from "@/lib/blogData";
+import { API } from "@/lib/api";
 
-export async function generateStaticParams() {
-  return blogData.map((blog) => ({
-    slug: blog.slug,
-  }));
+type Blog = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  image: string;
+  created_at: string;
+};
+
+async function getBlog(slug: string) {
+
+  console.log("slug",slug);
+  const res = await fetch(API.singleBlog(slug), {
+    cache: "no-store",
+  });
+
+
+
+  if (!res.ok) {
+    return null;
+  }
+
+  const data = await res.json();
+
+    console.log("data",data);
+
+  return data.data;
+}
+
+async function getBlogs() {
+  const res = await fetch(API.blogs, {
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  return data.data || [];
 }
 
 type Props = {
@@ -19,21 +52,25 @@ type Props = {
 export default async function BlogDetailPage({ params }: Props) {
   const { slug } = await params;
 
-  const blog = blogData.find((post) => post.slug === slug);
+  const blog = await getBlog(slug);
 
   if (!blog) {
     notFound();
   }
 
-  // Other blogs except current one
-  const otherBlogs = blogData.filter((post) => post.slug !== slug);
+  const blogs = await getBlogs();
+
+  const otherBlogs = blogs.filter(
+    (post: Blog) => post.slug !== blog.slug
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-orange-50/40 relative overflow-hidden">
-      {/* Hero Section */}
+
       <section className="pt-16 pb-20">
         <div className="max-w-7xl mx-auto px-6">
-          {/* Back Button */}
+
+          {/* Back */}
           <Link
             href="/blogs"
             className="inline-flex items-center gap-2 text-[#f07020] font-semibold mb-10 hover:gap-3 transition-all duration-300"
@@ -42,14 +79,17 @@ export default async function BlogDetailPage({ params }: Props) {
             Back to Blogs
           </Link>
 
-          {/* Main Layout */}
           <div className="grid lg:grid-cols-3 gap-10">
-            {/* LEFT CONTENT */}
+
+            {/* LEFT */}
             <div className="lg:col-span-2">
+
               {/* Date */}
               <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
                 <CalendarDays className="w-4 h-4 text-[#f07020]" />
-                <span>{blog.date}</span>
+                <span>
+                  {new Date(blog.created_at).toDateString()}
+                </span>
               </div>
 
               {/* Title */}
@@ -57,7 +97,7 @@ export default async function BlogDetailPage({ params }: Props) {
                 {blog.title}
               </h1>
 
-              {/* Featured Image */}
+              {/* Image */}
               <div className="relative w-full h-[320px] md:h-[520px] rounded-3xl overflow-hidden shadow-xl border border-orange-100 mb-10">
                 <Image
                   src={blog.image}
@@ -68,32 +108,25 @@ export default async function BlogDetailPage({ params }: Props) {
                 />
               </div>
 
-              {/* Content Card */}
+              {/* Content */}
               <article className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-orange-100">
-                {/* Description */}
-                <p className="text-xl text-gray-700 leading-relaxed mb-8 border-l-4 border-[#f07020] pl-5">
-                  {blog.description}
-                </p>
 
-                {/* Content */}
-                <div className="space-y-7">
-                  {blog.content.map((paragraph, index) => (
-                    <p
-                      key={index}
-                      className="text-gray-700 text-lg leading-relaxed"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
+                <div
+                  className="prose prose-lg max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: blog.description,
+                  }}
+                />
+
               </article>
             </div>
 
             {/* RIGHT SIDEBAR */}
             <aside className="lg:col-span-1">
               <div className="sticky top-24">
-                {/* Sidebar Card */}
+
                 <div className="bg-white rounded-3xl p-6 border border-orange-100 shadow-sm">
+
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">
                     Other Blogs
                   </h3>
@@ -101,13 +134,15 @@ export default async function BlogDetailPage({ params }: Props) {
                   <div className="w-14 h-[3px] bg-[#f07020] mb-6 rounded-full" />
 
                   <div className="space-y-6">
-                    {otherBlogs.map((post, index) => (
+
+                    {otherBlogs.slice(0, 5).map((post: Blog, index: number) => (
                       <Link
                         key={index}
                         href={`/blogs/${post.slug}`}
                         className="group block"
                       >
                         <div className="flex gap-4">
+
                           {/* Thumbnail */}
                           <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 border border-orange-100">
                             <Image
@@ -120,9 +155,10 @@ export default async function BlogDetailPage({ params }: Props) {
 
                           {/* Text */}
                           <div className="flex-1">
+
                             <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
                               <CalendarDays className="w-3 h-3 text-[#f07020]" />
-                              {post.date}
+                              {new Date(post.created_at).toDateString()}
                             </p>
 
                             <h4 className="text-sm font-semibold text-gray-900 leading-snug group-hover:text-[#f07020] transition-colors duration-300 line-clamp-3">
@@ -133,26 +169,24 @@ export default async function BlogDetailPage({ params }: Props) {
                               Read
                               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform duration-300" />
                             </span>
+
                           </div>
                         </div>
 
-                        {/* Divider */}
                         {index !== otherBlogs.length - 1 && (
                           <div className="border-b border-orange-100 mt-6" />
                         )}
                       </Link>
                     ))}
+
                   </div>
                 </div>
               </div>
             </aside>
+
           </div>
         </div>
       </section>
-
-      {/* Decorative Blur */}
-      <div className="absolute top-0 right-0 w-72 h-72 bg-[#f07020]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-72 h-72 bg-orange-200/20 rounded-full blur-3xl pointer-events-none" />
     </main>
   );
 }

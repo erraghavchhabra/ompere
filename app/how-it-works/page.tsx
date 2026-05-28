@@ -22,12 +22,7 @@ export default function HowItWorksPage() {
 
 
       <FinalCTA
-        title="Ready to Get Started?"
-        desc="Join hundreds of satisfied sellers. Get your instant price estimate now!"
-        primaryText="Calculate Price →"
-        secondaryText="Talk to Expert"
-        primaryLink="/calculator"
-        secondaryLink="/contact"
+       
       />
     </main>
   );

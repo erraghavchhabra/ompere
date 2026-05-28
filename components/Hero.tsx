@@ -2,9 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/api";
+
+// ── Google Places types ───────────────────────────────────────────────────────
+declare global {
+  interface Window {
+    google: any;
+    initGooglePlaces?: () => void;
+  }
+}
 
 const heroSlides = [
   {
@@ -34,35 +42,88 @@ const heroSlides = [
 interface PriceRow {
   brand_id: number;
   brand_name: string;
-  canopy_id: number | null;
-  canopy_name: string | null;
   capacity_kva: string;
 }
 
 interface Option { id: string; name: string }
+
+const years = Array.from(
+  { length: new Date().getFullYear() - 1999 },
+  (_, i) => `${2000 + i}`
+).reverse();
 
 export default function Hero() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
 
   // ── Raw data ─────────────────────────────────────────────────────────────
-  const [allRows, setAllRows]       = useState<PriceRow[]>([]);
-  const [loading, setLoading]       = useState(false);
+  const [allRows, setAllRows] = useState<PriceRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // ── Derived dropdown options ──────────────────────────────────────────────
   const [brands, setBrands]               = useState<Option[]>([]);
-  const [canopyOptions, setCanopyOptions] = useState<Option[]>([]);
   const [capacityOptions, setCapacityOptions] = useState<string[]>([]);
 
   // ── Selections ────────────────────────────────────────────────────────────
   const [selectedBrand, setSelectedBrand]       = useState("");
-  const [selectedCanopy, setSelectedCanopy]     = useState("");
   const [selectedCapacity, setSelectedCapacity] = useState("");
+  const [selectedYear, setSelectedYear]         = useState("");
 
-  const [name, setName]   = useState("");
-  const [phone, setPhone] = useState("");
+  // ── Modal fields ──────────────────────────────────────────────────────────
+  const [name, setName]         = useState("");
+  const [phone, setPhone]       = useState("");
+  const [location, setLocation] = useState("");
+  const locationInputRef        = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<any>(null);
 
-  // ── Fetch once on mount ───────────────────────────────────────────────────
+  // ── Load Google Places script once ───────────────────────────────────────
+  useEffect(() => {
+    if (document.getElementById("google-places-script")) return;
+    const script = document.createElement("script");
+    script.id  = "google-places-script";
+    // Replace YOUR_API_KEY with your actual Google Maps API key
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBXSowlX1oH3LU_LthrkKFG791QjmjzEFo&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }, []);
+
+  // ── Init autocomplete when modal opens ────────────────────────────────────
+  useEffect(() => {
+    if (!showModal) return;
+
+    const initAutocomplete = () => {
+      if (!locationInputRef.current || !window.google?.maps?.places) return;
+      if (autocompleteRef.current) return; // already initialised
+
+      autocompleteRef.current = new window.google.maps.places.Autocomplete(
+        locationInputRef.current,
+        {
+          types: ["(cities)"],
+          componentRestrictions: { country: "in" }, // restrict to India
+          fields: ["formatted_address", "name"],
+        }
+      );
+
+      autocompleteRef.current.addListener("place_changed", () => {
+        const place = autocompleteRef.current!.getPlace();
+        setLocation(place.formatted_address ?? place.name ?? "");
+      });
+    };
+
+    // Google may already be loaded
+    if (window.google?.maps?.places) {
+      initAutocomplete();
+    } else {
+      // Wait for script to finish loading
+      const script = document.getElementById("google-places-script") as HTMLScriptElement | null;
+      if (script) script.addEventListener("load", initAutocomplete);
+    }
+
+    return () => {
+      // Clean up listener on unmount / close — autocomplete stays attached to input
+    };
+  }, [showModal]);
   useEffect(() => {
     setLoading(true);
     fetch(API.priceNewAll)
@@ -86,51 +147,17 @@ export default function Hero() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Brand selected → derive unique canopies ───────────────────────────────
+  // ── Brand selected → derive unique capacities ─────────────────────────────
   const handleBrandChange = (brandId: string) => {
     setSelectedBrand(brandId);
-    setSelectedCanopy("");
     setSelectedCapacity("");
-    setCapacityOptions([]);
 
     if (!brandId) {
-      setCanopyOptions([]);
-      return;
-    }
-
-    const filtered = allRows.filter((r) => String(r.brand_id) === brandId);
-    const seen = new Set<string>();
-    const unique: Option[] = [];
-
-    for (const row of filtered) {
-      const key = row.canopy_id !== null ? String(row.canopy_id) : "__none__";
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push({
-          id: key,
-          name: row.canopy_name ?? "Open (No Canopy)",
-        });
-      }
-    }
-    setCanopyOptions(unique);
-  };
-
-  // ── Canopy selected → derive unique capacities ────────────────────────────
-  const handleCanopyChange = (canopyId: string) => {
-    setSelectedCanopy(canopyId);
-    setSelectedCapacity("");
-
-    if (!canopyId) {
       setCapacityOptions([]);
       return;
     }
 
-    const filtered = allRows.filter((r) => {
-      if (String(r.brand_id) !== selectedBrand) return false;
-      const rowCanopy = r.canopy_id !== null ? String(r.canopy_id) : "__none__";
-      return rowCanopy === canopyId;
-    });
-
+    const filtered = allRows.filter((r) => String(r.brand_id) === brandId);
     const seen = new Set<string>();
     const unique: string[] = [];
     for (const row of filtered) {
@@ -140,7 +167,6 @@ export default function Hero() {
         unique.push(key);
       }
     }
-    // Sort numerically
     unique.sort((a, b) => Number(a) - Number(b));
     setCapacityOptions(unique);
   };
@@ -151,12 +177,11 @@ export default function Hero() {
     const params = new URLSearchParams();
     params.set("machine_type_id", "1");
     if (selectedBrand)    params.set("brand_id",     selectedBrand);
-    // Send null-safe canopy_id
-    if (selectedCanopy && selectedCanopy !== "__none__")
-                          params.set("canopy_id",    selectedCanopy);
     if (selectedCapacity) params.set("capacity_kva", selectedCapacity);
-    if (name)             params.set("name",          name);
-    if (phone)            params.set("phone",         phone);
+    if (selectedYear)     params.set("year",          selectedYear);
+    if (name)             params.set("name",           name);
+    if (phone)            params.set("phone",          phone);
+    if (location)         params.set("location",       location);
     router.push(`/machinery-valuation?${params.toString()}`);
   };
 
@@ -213,24 +238,11 @@ export default function Hero() {
                   ))}
                 </select>
 
-                {/* CANOPY */}
-                <select
-                  value={selectedCanopy}
-                  onChange={(e) => handleCanopyChange(e.target.value)}
-                  disabled={!selectedBrand}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white disabled:opacity-50"
-                >
-                  <option value="">Select Canopy Type</option>
-                  {canopyOptions.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-
                 {/* CAPACITY */}
                 <select
                   value={selectedCapacity}
                   onChange={(e) => setSelectedCapacity(e.target.value)}
-                  disabled={!selectedCanopy}
+                  disabled={!selectedBrand}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white disabled:opacity-50"
                 >
                   <option value="">Select Capacity (KVA)</option>
@@ -239,10 +251,23 @@ export default function Hero() {
                   ))}
                 </select>
 
+                {/* YEAR */}
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  disabled={!selectedCapacity}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none bg-white disabled:opacity-50"
+                >
+                  <option value="">Select Year</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+
                 {/* BUTTON */}
                 <button
                   onClick={handleCalculateClick}
-                  disabled={!selectedBrand || !selectedCanopy || !selectedCapacity}
+                  disabled={!selectedBrand || !selectedCapacity || !selectedYear}
                   className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Calculate Price
@@ -350,6 +375,17 @@ export default function Hero() {
                 maxLength={10}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none"
               />
+              <div className="relative">
+                <input
+                  ref={locationInputRef}
+                  type="text"
+                  placeholder="Your Location (City / State)"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#f07020] outline-none"
+                  autoComplete="off"
+                />
+              </div>
               <button
                 onClick={handleProceed}
                 className="w-full bg-[#f07020] text-white py-3 rounded-xl font-medium hover:bg-[#d85f14] transition"
@@ -375,6 +411,27 @@ export default function Hero() {
           38%  { opacity: 0; transform: translateY(-20px); }
           100% { opacity: 0; transform: translateY(-20px); }
         }
+        /* Google Places dropdown styling */
+        .pac-container {
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+          font-family: inherit;
+          font-size: 14px;
+          margin-top: 4px;
+          overflow: hidden;
+        }
+        .pac-item {
+          padding: 10px 14px;
+          cursor: pointer;
+          border-top: 1px solid #f3f4f6;
+        }
+        .pac-item:hover, .pac-item-selected {
+          background: #fff5ef;
+        }
+        .pac-item-query { color: #1a1a1a; font-weight: 500; }
+        .pac-matched { color: #f07020; }
+        .pac-icon { display: none; }
       `}</style>
     </section>
   );

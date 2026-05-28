@@ -50,6 +50,7 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* 
             {[FaFacebookF, FaInstagram, FaLinkedinIn].map((Icon, i) => (
               <a
                 key={i}
@@ -59,6 +60,8 @@ export default function Header() {
                 <Icon size={13} />
               </a>
             ))}
+
+            */}
           </div>
         </div>
       </div>

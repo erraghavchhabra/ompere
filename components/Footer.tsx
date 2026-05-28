@@ -8,17 +8,42 @@ import {
   FaTwitter,
   FaLinkedinIn,
   FaInstagram,
+  FaWhatsapp,
 } from "react-icons/fa";
+
+/* SAME LINKS AS HEADER */
+
+const navLinks = [
+ 
+  { name: "About Us", href: "/about" },
+  { name: "How It Works", href: "/how-it-works" },
+  { name: "I Want to Sell", href: "/sell" },
+  { name: "I Want to Buy", href: "/buy" },
+  { name: "Price Calculator", href: "/price-calculator" },
+  { name: "Blog", href: "/blogs" },
+  { name: "Contact Us", href: "/contact" },
+];
+
+const legalLinks = [
+  { name: "Privacy Policy", href: "/privacy-policy" },
+  { name: "Terms & Conditions", href: "/terms-and-conditions" },
+  { name: "Cookie Policy", href: "/cookie-policy" },
+  { name: "FAQs", href: "/faqs" },
+  { name: "Contact Us", href: "/contact" },
+];
 
 export default function Footer() {
   return (
-    <footer className="bg-[#1a1a1a] text-white pt-20 pb-8">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Main Footer */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 pb-14 border-b border-white/10">
-          {/* Brand */}
+    <footer className="relative bg-[#111111] text-white ">
+      {/* TOP GRADIENT */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(240,112,32,0.12),transparent_30%)] pointer-events-none" />
+
+      <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-8">
+        {/* MAIN GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-14 pb-14 border-b border-white/10">
+          {/* BRAND */}
           <div>
-            <Link href="/" className="flex items-center mb-5">
+            <Link href="/" className="inline-flex mb-6">
               <Image
                 src="/assets/img/logo-ft.svg"
                 alt="Ompere Logo"
@@ -29,110 +54,145 @@ export default function Footer() {
               />
             </Link>
 
-            <p className="text-white/70 leading-relaxed text-sm mb-6">
+            <p className="text-white/65 leading-8 text-[15px] max-w-sm mb-7">
               India’s trusted marketplace for buying and selling used diesel
-              generators. Get the best value with transparent dealings.
+              generators with transparent pricing and reliable support.
             </p>
 
-            <div className="flex gap-3">
+            {/* SOCIAL 
+            <div className="flex items-center gap-3">
               {[FaFacebookF, FaTwitter, FaLinkedinIn, FaInstagram].map(
                 (Icon, i) => (
                   <a
                     key={i}
                     href="#"
-                    className="w-10 h-10 rounded-xl bg-white/5 hover:bg-[#f07020] flex items-center justify-center transition"
+                    className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-[#f07020] hover:border-[#f07020] flex items-center justify-center transition-all duration-300 hover:-translate-y-1"
                   >
                     <Icon className="w-4 h-4" />
                   </a>
                 )
               )}
-            </div>
+            </div>*/}
           </div>
 
-          {/* Quick Links */}
+          {/* QUICK LINKS */}
           <div>
-            <h4 className="text-lg font-semibold mb-5">Quick Links</h4>
-            <div className="space-y-3 text-white/70">
-              {[
-                "Home",
-                "About Us",
-                "How It Works",
-                "Sell Your DG",
-                "Price Calculator",
-                "Contact Us",
-              ].map((item) => (
+            <h4 className="text-xl font-semibold mb-6">Quick Links</h4>
+
+            <div className="space-y-4">
+              {navLinks.map((item) => (
                 <Link
-                  key={item}
-                  href="#"
-                  className="block hover:text-[#f07020] transition"
+                  key={item.name}
+                  href={item.href}
+                  className="block text-white/65 hover:text-[#f07020] transition duration-300 text-[15px]"
                 >
-                  {item}
+                  {item.name}
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Legal / Support */}
+          {/* LEGAL */}
           <div>
-            <h4 className="text-lg font-semibold mb-5">Legal & Support</h4>
-            <div className="space-y-3 text-white/70">
-              {[
-                "Privacy Policy",
-                "Terms & Conditions",
-                "Refund Policy",
-                "Cookie Policy",
-                "Support Center",
-                "FAQs",
-              ].map((item) => (
+            <h4 className="text-xl font-semibold mb-6">Legal & Support</h4>
+
+            <div className="space-y-4">
+              {legalLinks.map((item) => (
                 <Link
-                  key={item}
-                  href="#"
-                  className="block hover:text-[#f07020] transition"
+                  key={item.name}
+                  href={item.href}
+                  className="block text-white/65 hover:text-[#f07020] transition duration-300 text-[15px]"
                 >
-                  {item}
+                  {item.name}
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Contact */}
+          {/* CONTACT */}
           <div>
-            <h4 className="text-lg font-semibold mb-5">Contact Us</h4>
+            <h4 className="text-xl font-semibold mb-6">Contact Us</h4>
 
-            <div className="space-y-4 text-white/70 text-sm">
-              <div className="flex gap-3">
-                <MapPin className="w-5 h-5 text-[#f07020] flex-shrink-0 mt-0.5" />
-                <span>
-                  123 Industrial Area, Sector 5, Gurgaon, Haryana - 122001
-                </span>
+            <div className="space-y-5 text-white/65 text-[15px]">
+              <div className="flex items-start gap-4">
+                <div className="w-11 h-11 rounded-2xl bg-[#f07020]/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-[#f07020]" />
+                </div>
+
+                <p className="leading-7">
+                  123 Industrial Area, Sector 5,
+                  <br />
+                  Gurgaon, Haryana - 122001
+                </p>
               </div>
 
-              <div className="flex gap-3">
-                <Phone className="w-5 h-5 text-[#f07020] flex-shrink-0" />
+              <a
+                href="tel:+919876543210"
+                className="flex items-center gap-4 hover:text-[#f07020] transition"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-[#f07020]/10 flex items-center justify-center flex-shrink-0">
+                  <Phone className="w-5 h-5 text-[#f07020]" />
+                </div>
+
                 <span>+91 98765 43210</span>
-              </div>
+              </a>
 
-              <div className="flex gap-3">
-                <Mail className="w-5 h-5 text-[#f07020] flex-shrink-0" />
+              <a
+                href="mailto:info@ompere.com"
+                className="flex items-center gap-4 hover:text-[#f07020] transition"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-[#f07020]/10 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-5 h-5 text-[#f07020]" />
+                </div>
+
                 <span>info@ompere.com</span>
-              </div>
+              </a>
 
               <div className="pt-2">
-                <p className="text-white/50 text-xs">
-                  Business Hours:
+                <p className="text-white/40 text-sm leading-7">
+                  Business Hours
                   <br />
-                  Mon-Sat: 9:00 AM - 6:00 PM
+                  Mon - Sat : 9:00 AM - 6:00 PM
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Copyright */}
-        <div className="pt-8 text-center text-sm text-white/50">
-          © {new Date().getFullYear()} Ompere. All rights reserved.
+        {/* BOTTOM */}
+        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-white/40 text-center md:text-left">
+            © {new Date().getFullYear()} Ompere. All rights reserved.
+          </p>
+
+          <div className="flex items-center gap-6 text-sm text-white/40">
+            <Link
+              href="/privacy-policy"
+              className="hover:text-[#f07020] transition"
+            >
+              Privacy Policy
+            </Link>
+
+            <Link
+              href="/terms-and-conditions"
+              className="hover:text-[#f07020] transition"
+            >
+              Terms
+            </Link>
+          </div>
         </div>
       </div>
+      
+<a
+  href="https://wa.me/919876543210"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center shadow-[0_10px_30px_rgba(37,211,102,0.35)] hover:scale-110 transition-all duration-300"
+>
+  <FaWhatsapp className="w-7 h-7 text-white" />
+</a>
     </footer>
+    
   );
+  
 }

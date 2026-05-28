@@ -13,6 +13,7 @@ export default function ContactInfo() {
       icon: Phone,
       title: "Phone",
       value: "+91 98765 43210",
+      link: "tel:+919876543210",
       color: "text-green-600",
       bg: "bg-green-50",
       border: "border-green-100",
@@ -21,6 +22,7 @@ export default function ContactInfo() {
       icon: Mail,
       title: "Email",
       value: "info@powergenmarketplace.com",
+      link: "mailto:info@powergenmarketplace.com",
       color: "text-blue-600",
       bg: "bg-blue-50",
       border: "border-blue-100",
@@ -44,7 +46,7 @@ export default function ContactInfo() {
   ];
 
   return (
-    <section className="w-full  py-16">
+    <section className="w-full py-16">
       <div className="max-w-6xl mx-auto px-6">
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -55,25 +57,36 @@ export default function ContactInfo() {
             return (
               <div
                 key={i}
-                className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition"
+                className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition duration-300"
               >
 
                 {/* ICON */}
                 <div className="flex justify-center mb-4">
-                  <div className={`w-12 h-12 flex items-center justify-center rounded-lg border ${item.bg} ${item.border}`}>
+                  <div
+                    className={`w-12 h-12 flex items-center justify-center rounded-lg border ${item.bg} ${item.border}`}
+                  >
                     <Icon className={`w-5 h-5 ${item.color}`} />
                   </div>
                 </div>
 
                 {/* TITLE */}
-                <h3 className="text-md font-semibold text-gray-900 mb-1">
+                <h3 className="text-md font-semibold text-gray-900 mb-2">
                   {item.title}
                 </h3>
 
                 {/* VALUE */}
-                <p className="!text-sm text-gray-600 break-words">
-                  {item.value}
-                </p>
+                {item.link ? (
+                  <a
+                    href={item.link}
+                    className="text-sm text-gray-600 hover:text-[#f07020] transition break-words"
+                  >
+                    {item.value}
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-600 break-words leading-relaxed">
+                    {item.value}
+                  </p>
+                )}
 
               </div>
             );

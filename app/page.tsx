@@ -13,7 +13,7 @@ export default function Home() {
       <ValueSection />
       <ComparisonSection />
       <HowItWorks />
-      <Testimonials />
+{/* <Testimonials /> */}
       <FinalCTA />
 
     </>

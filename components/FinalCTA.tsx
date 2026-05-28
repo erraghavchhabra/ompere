@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 
 export default function FinalCTA({
-  title = "Ready to Sell Your Diesel Genset?",
-  desc = "Get an instant price estimate now and turn your used genset into cash within days",
+  title = "Ready to Sell Your Industrial Machinery or Diesel Genset?",
+  desc = "Get an instant market-based price estimate and turn your used gensets or industrial equipment into cash with a fast, transparent, and hassle-free process.",
   primaryText = "Calculate Price Now",
-  secondaryText = "Submit Your Genset",
-  primaryLink = "/calculator",
-  secondaryLink = "/submit-genset",
+  secondaryText = "How it Works",
+  primaryLink = "/price-calculator",
+  secondaryLink = "/how-it-works",
 }) {
   return (
     <section className="pt-0 pb-20 bg-white relative overflow-hidden">
@@ -22,7 +21,7 @@ export default function FinalCTA({
 
           <div className="relative z-10 max-w-3xl mx-auto">
             
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-5">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-5 leading-tight">
               {title}
             </h2>
 
@@ -37,7 +36,6 @@ export default function FinalCTA({
                 className="inline-flex items-center justify-center gap-2 bg-white text-[#f07020] hover:bg-orange-50 px-8 py-4 rounded-full font-semibold transition shadow-lg"
               >
                 {primaryText}
-              
               </Link>
 
               <Link

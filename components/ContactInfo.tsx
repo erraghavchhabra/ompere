@@ -1,49 +1,65 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Phone,
   Mail,
   MapPin,
   Clock,
 } from "lucide-react";
+import { getSettings } from "@/lib/getSettings";
 
 export default function ContactInfo() {
+  const [settings, setSettings] = useState<any>({});
+   useEffect(() => {
+  
+    const fetchSettings = async () => {
+  
+      const data = await getSettings();
+      console.log("data",data);
+      setSettings(data);
+  
+    };
+  
+    fetchSettings();
+  
+  }, []);
   const items = [
-    {
-      icon: Phone,
-      title: "Phone",
-      value: "+91 98765 43210",
-      link: "tel:+919876543210",
-      color: "text-green-600",
-      bg: "bg-green-50",
-      border: "border-green-100",
-    },
-    {
-      icon: Mail,
-      title: "Email",
-      value: "info@powergenmarketplace.com",
-      link: "mailto:info@powergenmarketplace.com",
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
-    },
-    {
-      icon: MapPin,
-      title: "Address",
-      value: "123 Industrial Area, Sector 5, Gurgaon, Haryana - 122001",
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-      border: "border-orange-100",
-    },
-    {
-      icon: Clock,
-      title: "Business Hours",
-      value: "Mon-Sat: 9:00 AM - 6:00 PM",
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-      border: "border-purple-100",
-    },
-  ];
+  {
+    icon: Phone,
+    title: "Phone",
+    value: settings.phone || "",
+    link: `tel:${settings.phone || ""}`,
+    color: "text-green-600",
+    bg: "bg-green-50",
+    border: "border-green-100",
+  },
+  {
+    icon: Mail,
+    title: "Email",
+    value: settings.email || "",
+    link: `mailto:${settings.email || ""}`,
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-100",
+  },
+  {
+    icon: MapPin,
+    title: "Address",
+    value: settings.address || "",
+    color: "text-orange-600",
+    bg: "bg-orange-50",
+    border: "border-orange-100",
+  },
+  {
+    icon: Clock,
+    title: "Business Hours",
+    value: settings.business_hours || "",
+    color: "text-purple-600",
+    bg: "bg-purple-50",
+    border: "border-purple-100",
+  },
+];
 
   return (
     <section className="w-full py-16">

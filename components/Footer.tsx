@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Phone, Mail } from "lucide-react";
@@ -10,6 +11,7 @@ import {
   FaInstagram,
   FaWhatsapp,
 } from "react-icons/fa";
+import { getSettings } from "@/lib/getSettings";
 
 /* SAME LINKS AS HEADER */
 
@@ -23,6 +25,7 @@ const navLinks = [
   { name: "Blog", href: "/blogs" },
   { name: "Contact Us", href: "/contact" },
 ];
+ 
 
 const legalLinks = [
   { name: "Privacy Policy", href: "/privacy-policy" },
@@ -32,7 +35,24 @@ const legalLinks = [
   { name: "Contact Us", href: "/contact" },
 ];
 
+
+
 export default function Footer() {
+
+  const [settings, setSettings] = useState<any>({});
+   useEffect(() => {
+  
+    const fetchSettings = async () => {
+  
+      const data = await getSettings();
+      console.log("data",data);
+      setSettings(data);
+  
+    };
+  
+    fetchSettings();
+  
+  }, []);
   return (
     <footer className="relative bg-[#111111] text-white ">
       {/* TOP GRADIENT */}
@@ -120,39 +140,37 @@ export default function Footer() {
                 </div>
 
                 <p className="leading-7">
-                  123 Industrial Area, Sector 5,
-                  <br />
-                  Gurgaon, Haryana - 122001
+                {settings.address || ""}
                 </p>
               </div>
 
               <a
-                href="tel:+919876543210"
+                 href={`tel:${settings.phone || ""}`}
                 className="flex items-center gap-4 hover:text-[#f07020] transition"
               >
                 <div className="w-11 h-11 rounded-2xl bg-[#f07020]/10 flex items-center justify-center flex-shrink-0">
                   <Phone className="w-5 h-5 text-[#f07020]" />
                 </div>
 
-                <span>+91 98765 43210</span>
+                <span> {settings.phone || ""}</span>
               </a>
 
               <a
-                href="mailto:info@ompere.com"
+                href={`mailto:${settings.email || ""}`}
                 className="flex items-center gap-4 hover:text-[#f07020] transition"
               >
                 <div className="w-11 h-11 rounded-2xl bg-[#f07020]/10 flex items-center justify-center flex-shrink-0">
                   <Mail className="w-5 h-5 text-[#f07020]" />
                 </div>
 
-                <span>info@ompere.com</span>
+                <span> {settings.email || ""}</span>
               </a>
 
               <div className="pt-2">
                 <p className="text-white/40 text-sm leading-7">
                   Business Hours
                   <br />
-                  Mon - Sat : 9:00 AM - 6:00 PM
+                  {settings.business_hours || ""}
                 </p>
               </div>
             </div>

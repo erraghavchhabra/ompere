@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Mail, Phone, Menu, X } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaLinkedinIn } from "react-icons/fa";
+import { getSettings } from "@/lib/getSettings";
+
 
 const navLinks = [
   { name: "Home", href: "/" },
@@ -20,12 +22,28 @@ const navLinks = [
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [settings, setSettings] = useState<any>({});
+  
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 30);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+
+  const fetchSettings = async () => {
+
+    const data = await getSettings();
+    console.log("data",data);
+    setSettings(data);
+
+  };
+
+  fetchSettings();
+
+}, []);
 
   return (
     <>
@@ -34,18 +52,18 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-6 py-2 flex justify-between items-center">
           <div className="flex items-center gap-6">
             <a
-              href="tel:+1234567890"
+              href={`tel:${settings.phone || ""}`}
               className="flex items-center gap-2 hover:text-[#f07020] transition"
             >
               <Phone size={15} />
-              +1 234 567 890
+             {settings.phone || ""}
             </a>
             <a
-              href="mailto:info@example.com"
+            href={`mailto:${settings.email || ""}`}
               className="flex items-center gap-2 hover:text-[#f07020] transition"
             >
               <Mail size={15} />
-              info@example.com
+               {settings.email || ""}
             </a>
           </div>
 

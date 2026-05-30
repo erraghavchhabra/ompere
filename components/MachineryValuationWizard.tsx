@@ -4,9 +4,15 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, ChevronDown, Upload, X, Loader2 } from "lucide-react";
 import { API } from "@/lib/api";
+import CountUp from "react-countup";
 
-interface Brand    { id: number | string; name: string }
-interface Capacity { kva: number | string }
+interface Brand {
+  id: number | string;
+  name: string;
+}
+interface Capacity {
+  kva: number | string;
+}
 
 interface PriceResult {
   status: boolean;
@@ -17,7 +23,7 @@ interface PriceResult {
   hours_factor?: number | null;
   engine_factor?: number | null;
   estimated_price?: number | string | null;
-  hours_band_index?: number | null;  // null=not selected, -1=don't know, 0-7=band
+  hours_band_index?: number | null; // null=not selected, -1=don't know, 0-7=band
   message?: string;
 }
 
@@ -25,43 +31,50 @@ interface PriceResult {
 function MachineryValuationWizardInner() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
-  const [uploadedImages, setUploadedImages]     = useState<File[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [uploadedPreviews, setUploadedPreviews] = useState<string[]>([]);
 
   // ── machine_type always = 1, never shown ─────────────────────────────────
   const MACHINE_TYPE_ID = "1";
 
-  const nameFromUrl  = searchParams.get("name")  ?? "";
+  const nameFromUrl = searchParams.get("name") ?? "";
   const phoneFromUrl = searchParams.get("phone") ?? "";
+  const locationFromUrl = searchParams.get("location") ?? "";
 
   // Step 1 — pre-filled from URL (canopy removed)
-  const [selectedBrand,    setSelectedBrand]    = useState(searchParams.get("brand_id")     ?? "");
-  const [selectedCapacity, setSelectedCapacity] = useState(searchParams.get("capacity_kva") ?? "");
-  const [selectedYear,     setSelectedYear]     = useState(searchParams.get("year")         ?? "");
+  const [selectedBrand, setSelectedBrand] = useState(
+    searchParams.get("brand_id") ?? "",
+  );
+  const [selectedCapacity, setSelectedCapacity] = useState(
+    searchParams.get("capacity_kva") ?? "",
+  );
+  const [selectedYear, setSelectedYear] = useState(
+    searchParams.get("year") ?? "",
+  );
 
   // Step 2
-  const [selectedHours,           setSelectedHours]           = useState("");
+  const [selectedHours, setSelectedHours] = useState("");
   const [selectedEngineCondition, setSelectedEngineCondition] = useState("");
 
   // ── Dropdown data ─────────────────────────────────────────────────────────
-  const [brands,          setBrands]          = useState<Brand[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [capacityOptions, setCapacityOptions] = useState<Capacity[]>([]);
 
   // ── Loading flags ─────────────────────────────────────────────────────────
-  const [loadingBrands,   setLoadingBrands]   = useState(true);
+  const [loadingBrands, setLoadingBrands] = useState(true);
   const [loadingCapacity, setLoadingCapacity] = useState(false);
 
   // ── Calculate / submit state ──────────────────────────────────────────────
-  const [calculating,   setCalculating]   = useState(false);
-  const [priceResult,   setPriceResult]   = useState<PriceResult | null>(null);
-  const [calcError,     setCalcError]     = useState<string | null>(null);
-  const [submitting,    setSubmitting]    = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const [priceResult, setPriceResult] = useState<PriceResult | null>(null);
+  const [calcError, setCalcError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError,   setSubmitError]   = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const years = Array.from(
     { length: new Date().getFullYear() - 1999 },
-    (_, i) => `${2000 + i}`
+    (_, i) => `${2000 + i}`,
   ).reverse();
 
   // ── 1. Fetch brands once ──────────────────────────────────────────────────
@@ -84,9 +97,9 @@ function MachineryValuationWizardInner() {
 
   // ── 3. Auto-calculate when brand + capacity come from URL ─────────────────
   useEffect(() => {
-    const brandId     = searchParams.get("brand_id");
+    const brandId = searchParams.get("brand_id");
     const capacityKva = searchParams.get("capacity_kva");
-    const year        = searchParams.get("year");
+    const year = searchParams.get("year");
     if (!loadingBrands && brandId && capacityKva) {
       autoCalculate(brandId, capacityKva, year ?? undefined);
     }
@@ -98,7 +111,9 @@ function MachineryValuationWizardInner() {
     setLoadingCapacity(true);
     setCapacityOptions([]);
     try {
-      const res  = await fetch(`${API.priceMappingCapacities}?brand_id=${brandId}`);
+      const res = await fetch(
+        `${API.priceMappingCapacities}?brand_id=${brandId}`,
+      );
       const data = await res.json();
       setCapacityOptions(data);
     } catch (err) {
@@ -117,15 +132,19 @@ function MachineryValuationWizardInner() {
   };
 
   // ── Auto-calculate (from URL params) ─────────────────────────────────────
-  const autoCalculate = async (brand_id: string, capacity_kva: string, make_year?: string) => {
+  const autoCalculate = async (
+    brand_id: string,
+    capacity_kva: string,
+    make_year?: string,
+  ) => {
     setCalculating(true);
     try {
       const body: Record<string, string> = { brand_id, capacity_kva };
       if (make_year) body.make_year = make_year;
-      const res  = await fetch(API.calculate, {
-        method:  "POST",
+      const res = await fetch(API.calculate, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
+        body: JSON.stringify(body),
       });
       const data: PriceResult = await res.json();
       setPriceResult(data);
@@ -154,19 +173,20 @@ function MachineryValuationWizardInner() {
     setCalculating(true);
     try {
       const body: Record<string, string> = {
-        brand_id:     selectedBrand,
+        brand_id: selectedBrand,
         capacity_kva: selectedCapacity,
       };
       if (selectedYear) body.make_year = selectedYear;
 
-      const res  = await fetch(API.calculate, {
-        method:  "POST",
+      const res = await fetch(API.calculate, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
+        body: JSON.stringify(body),
       });
       const data: PriceResult = await res.json();
       setPriceResult(data);
-      if (!data.status) setCalcError(data.message || "Price not found for selected options.");
+      if (!data.status)
+        setCalcError(data.message || "Price not found for selected options.");
     } catch (err) {
       console.error(err);
       setCalcError("Failed to fetch price. Please try again.");
@@ -182,17 +202,18 @@ function MachineryValuationWizardInner() {
     setCalculating(true);
     try {
       const body: Record<string, string> = {
-        brand_id:     selectedBrand,
+        brand_id: selectedBrand,
         capacity_kva: selectedCapacity,
       };
-      if (selectedYear)            body.make_year        = selectedYear;
-      if (selectedHours)           body.running_hours    = selectedHours;
-      if (selectedEngineCondition) body.engine_condition = selectedEngineCondition;
+      if (selectedYear) body.make_year = selectedYear;
+      if (selectedHours) body.running_hours = selectedHours;
+      if (selectedEngineCondition)
+        body.engine_condition = selectedEngineCondition;
 
-      const res  = await fetch(API.calculate, {
-        method:  "POST",
+      const res = await fetch(API.calculate, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
+        body: JSON.stringify(body),
       });
       const data: PriceResult = await res.json();
       setPriceResult(data);
@@ -205,36 +226,36 @@ function MachineryValuationWizardInner() {
   };
 
   // ── Live price update on step 1 field changes ─────────────────────────────
-useEffect(() => {
-  if (step !== 1) return;
-  if (!selectedBrand || !selectedCapacity) return;
+  useEffect(() => {
+    if (step !== 1) return;
+    if (!selectedBrand || !selectedCapacity) return;
 
-  const autoUpdatePrice = async () => {
-    setCalculating(true);
-    try {
-      const body: Record<string, string> = {
-        brand_id:     selectedBrand,
-        capacity_kva: selectedCapacity,
-      };
-      if (selectedYear) body.make_year = selectedYear;
+    const autoUpdatePrice = async () => {
+      setCalculating(true);
+      try {
+        const body: Record<string, string> = {
+          brand_id: selectedBrand,
+          capacity_kva: selectedCapacity,
+        };
+        if (selectedYear) body.make_year = selectedYear;
 
-      const res  = await fetch(API.calculate, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
-      });
-      const data: PriceResult = await res.json();
-      setPriceResult(data);
-    } catch (err) {
-      console.error("Live calculation error (step 1):", err);
-    } finally {
-      setCalculating(false);
-    }
-  };
+        const res = await fetch(API.calculate, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data: PriceResult = await res.json();
+        setPriceResult(data);
+      } catch (err) {
+        console.error("Live calculation error (step 1):", err);
+      } finally {
+        setCalculating(false);
+      }
+    };
 
-  autoUpdatePrice();
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [selectedBrand, selectedCapacity, selectedYear]);
+    autoUpdatePrice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrand, selectedCapacity, selectedYear]);
 
   // ── Live price update on step 2 condition changes ─────────────────────────
   useEffect(() => {
@@ -245,17 +266,18 @@ useEffect(() => {
       setCalculating(true);
       try {
         const body: Record<string, string> = {
-          brand_id:     selectedBrand,
+          brand_id: selectedBrand,
           capacity_kva: selectedCapacity,
         };
-        if (selectedYear)            body.make_year        = selectedYear;
-        if (selectedHours)           body.running_hours    = selectedHours;
-        if (selectedEngineCondition) body.engine_condition = selectedEngineCondition;
+        if (selectedYear) body.make_year = selectedYear;
+        if (selectedHours) body.running_hours = selectedHours;
+        if (selectedEngineCondition)
+          body.engine_condition = selectedEngineCondition;
 
-        const res  = await fetch(API.calculate, {
-          method:  "POST",
+        const res = await fetch(API.calculate, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify(body),
+          body: JSON.stringify(body),
         });
         const data: PriceResult = await res.json();
         setPriceResult(data);
@@ -267,7 +289,7 @@ useEffect(() => {
     };
 
     autoUpdatePrice();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHours, selectedEngineCondition]);
 
   const prevStep = () => step > 1 && setStep(step - 1);
@@ -277,13 +299,16 @@ useEffect(() => {
     const files = e.target.files;
     if (!files) return;
     const remaining = 3 - uploadedImages.length;
-    const newFiles  = Array.from(files).slice(0, remaining);
-    setUploadedImages((prev)   => [...prev, ...newFiles]);
-    setUploadedPreviews((prev) => [...prev, ...newFiles.map((f) => URL.createObjectURL(f))]);
+    const newFiles = Array.from(files).slice(0, remaining);
+    setUploadedImages((prev) => [...prev, ...newFiles]);
+    setUploadedPreviews((prev) => [
+      ...prev,
+      ...newFiles.map((f) => URL.createObjectURL(f)),
+    ]);
   };
 
   const removeImage = (index: number) => {
-    setUploadedImages((prev)   => prev.filter((_, i) => i !== index));
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
     setUploadedPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -293,26 +318,38 @@ useEffect(() => {
     setSubmitting(true);
     try {
       const fd = new FormData();
-      fd.append("name",            nameFromUrl);
-      fd.append("phone",           phoneFromUrl);
+      fd.append("name", nameFromUrl);
+      fd.append("phone", phoneFromUrl);
+      fd.append("location",           locationFromUrl);
       fd.append("machine_type_id", MACHINE_TYPE_ID);
-      fd.append("brand_id",        selectedBrand);
-      fd.append("capacity_kva",    selectedCapacity);
-      if (selectedYear)            fd.append("make_year",        selectedYear);
-      if (selectedHours)           fd.append("running_hours",    selectedHours);
-      if (selectedEngineCondition) fd.append("engine_condition", selectedEngineCondition);
-      if (priceResult?.price_new       != null) fd.append("price_new",       String(priceResult.price_new));
-      if (priceResult?.day2_price      != null) fd.append("day2_price",      String(priceResult.day2_price));
-      if (priceResult?.estimated_price != null) fd.append("estimated_price", String(priceResult.estimated_price));
-      if (priceResult?.year_factor     != null) fd.append("year_factor",     String(priceResult.year_factor));
-      if (priceResult?.hours_factor    != null) fd.append("hours_factor",    String(priceResult.hours_factor));
-      if (priceResult?.engine_factor   != null) fd.append("engine_factor",   String(priceResult.engine_factor));
+      fd.append("brand_id", selectedBrand);
+      fd.append("capacity_kva", selectedCapacity);
+      if (selectedYear) fd.append("make_year", selectedYear);
+      if (selectedHours) fd.append("running_hours", selectedHours);
+      if (selectedEngineCondition)
+        fd.append("engine_condition", selectedEngineCondition);
+      if (priceResult?.price_new != null)
+        fd.append("price_new", String(priceResult.price_new));
+      if (priceResult?.day2_price != null)
+        fd.append("day2_price", String(priceResult.day2_price));
+      if (priceResult?.estimated_price != null)
+        fd.append("estimated_price", String(priceResult.estimated_price));
+      if (priceResult?.year_factor != null)
+        fd.append("year_factor", String(priceResult.year_factor));
+      if (priceResult?.hours_factor != null)
+        fd.append("hours_factor", String(priceResult.hours_factor));
+      if (priceResult?.engine_factor != null)
+        fd.append("engine_factor", String(priceResult.engine_factor));
       uploadedImages.forEach((f) => fd.append("images[]", f));
 
-      const res  = await fetch(API.valuationSubmit, { method: "POST", body: fd });
+      const res = await fetch(API.valuationSubmit, {
+        method: "POST",
+        body: fd,
+      });
       const data = await res.json();
       if (data.status) setSubmitSuccess(true);
-      else setSubmitError(data.message || "Submission failed. Please try again.");
+      else
+        setSubmitError(data.message || "Submission failed. Please try again.");
     } catch (err) {
       console.error(err);
       setSubmitError("Something went wrong. Please try again.");
@@ -351,11 +388,15 @@ useEffect(() => {
     if (isNaN(baseDay2Price) || baseDay2Price <= 0) return null;
 
     // year_factor from API (depreciation_year table) — already correct
-    const yearFactor = typeof priceResult.year_factor === "number" ? priceResult.year_factor : 1;
-    const hourFactor = typeof priceResult.hours_factor === "number" ? priceResult.hours_factor : 1;
+    const yearFactor =
+      typeof priceResult.year_factor === "number" ? priceResult.year_factor : 1;
+    const hourFactor =
+      typeof priceResult.hours_factor === "number"
+        ? priceResult.hours_factor
+        : 1;
 
-    const yearSelected   = !!selectedYear;
-    const hoursSelected  = !!selectedHours;
+    const yearSelected = !!selectedYear;
+    const hoursSelected = !!selectedHours;
     const engineSelected = !!selectedEngineCondition;
 
     // ROUNDDOWN to nearest 1000 — matches Excel ROUNDDOWN(..., -3)
@@ -365,12 +406,17 @@ useEffect(() => {
     const hoursFactorForBand = (idx: number) => Math.pow(0.97, idx);
 
     // Average of all 8 hour bands (used for "Don't know")
-    const AVG_HOURS_FACTOR = Array.from({ length: 8 }, (_, i) => Math.pow(0.97, i))
-      .reduce((a, b) => a + b, 0) / 8;
+    const AVG_HOURS_FACTOR =
+      Array.from({ length: 8 }, (_, i) => Math.pow(0.97, i)).reduce(
+        (a, b) => a + b,
+        0,
+      ) / 8;
 
     // hours_band_index from API: null=not selected, -1=don't know, 0-7=specific band
     const bandIndex: number | null =
-      priceResult.hours_band_index != null ? priceResult.hours_band_index : null;
+      priceResult.hours_band_index != null
+        ? priceResult.hours_band_index
+        : null;
 
     // ── Resolve each factor for MAX and MIN independently ───────────────────
     //
@@ -393,7 +439,7 @@ useEffect(() => {
     // ── HOURS ─────────────────────────────────────────────────────────────────
     // MAX: 1.0 (best band <1000) when not selected
     // MIN: 0.87 (−13%) when not selected, replaced by 0.97^band when selected
-   /* let hoursFactorMax: number;
+    /* let hoursFactorMax: number;
     let hoursFactorMin: number;
     if (bandIndex === null) {
       hoursFactorMax = 1.0;
@@ -409,25 +455,40 @@ useEffect(() => {
     // ── ENGINE ────────────────────────────────────────────────────────────────
     // MAX: 1.05 (Excellent) when not selected
     // MIN: 0.95 (−5%) when not selected, replaced by engineFactor when selected
-    const engineFactorMax = engineSelected ? parseFloat(selectedEngineCondition) : 1;
-    const engineFactorMin = engineSelected ? parseFloat(selectedEngineCondition) : 0.95;
-
-  
-
+    const engineFactorMax = engineSelected
+      ? parseFloat(selectedEngineCondition)
+      : 1;
+    const engineFactorMin = engineSelected
+      ? parseFloat(selectedEngineCondition)
+      : 0.95;
 
     // ── Final MAX / MIN ───────────────────────────────────────────────────────
     // MAX base: day2_price × 0.85 (−15% margin) then apply selected factors
     // MIN base: day2_price × 0.80 (−20% margin) then apply selected/default factors
 
-  console.log("high",baseDay2Price,yearFactorMax,engineFactorMax,hoursFactorMax);
-   console.log("low",baseDay2Price,yearFactorMin,engineFactorMin,hoursFactorMin);
-    const high = rd(baseDay2Price * 0.85 * yearFactorMax * hoursFactorMax*engineFactorMax);
-    const low  = rd(baseDay2Price * 0.80 * yearFactorMin * hoursFactorMin*engineFactorMin);
+    console.log(
+      "high",
+      baseDay2Price,
+      yearFactorMax,
+      engineFactorMax,
+      hoursFactorMax,
+    );
+    console.log(
+      "low",
+      baseDay2Price,
+      yearFactorMin,
+      engineFactorMin,
+      hoursFactorMin,
+    );
+    const high = rd(
+      baseDay2Price * 0.85 * yearFactorMax * hoursFactorMax * engineFactorMax,
+    );
+    const low = rd(
+      baseDay2Price * 0.8 * yearFactorMin * hoursFactorMin * engineFactorMin,
+    );
 
-  //  const high = rd(gHigh * engineFactorMax);
+    //  const high = rd(gHigh * engineFactorMax);
     //const low  = rd(gLow  * engineFactorMin);
-
-
 
     return { high, low };
   };
@@ -444,10 +505,13 @@ useEffect(() => {
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-[#1a1a1a] mb-3">Request Submitted!</h2>
+          <h2 className="text-2xl font-bold text-[#1a1a1a] mb-3">
+            Request Submitted!
+          </h2>
           <p className="text-gray-500 text-sm mb-6">
-            Thank you, {nameFromUrl || "there"}! Our team will reach out to you at{" "}
-            {phoneFromUrl || "your number"} shortly with your valuation report.
+            Thank you, {nameFromUrl || "there"}! Our team will reach out to you
+            at {phoneFromUrl || "your number"} shortly with your valuation
+            report.
           </p>
           <a
             href="/"
@@ -466,55 +530,68 @@ useEffect(() => {
     <section className="min-h-screen py-14 bg-gradient-to-b from-white to-orange-50/40 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-8 items-stretch">
-
           {/* LEFT FORM */}
           <div className="flex flex-col">
             {/* Stepper */}
             <div className="flex items-center flex-wrap gap-4 mb-6">
-              {["Machine Details", "Condition", "Images"].map((label, index) => {
-                const current = index + 1;
-                return (
-                  <div key={label} className="flex items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition ${
-                      step === current
-                        ? "bg-[#f07020] text-white shadow-lg"
-                        : "bg-white border border-orange-100 text-gray-600"
-                    }`}>
-                      {current}
+              {["Machine Details", "Condition", "Images"].map(
+                (label, index) => {
+                  const current = index + 1;
+                  return (
+                    <div key={label} className="flex items-center">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition ${
+                          step === current
+                            ? "bg-[#f07020] text-white shadow-lg"
+                            : "bg-white border border-orange-100 text-gray-600"
+                        }`}
+                      >
+                        {current}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-700">
+                        {label}
+                      </span>
+                      {current < 3 && (
+                        <div className="w-10 h-[2px] bg-orange-200 mx-4" />
+                      )}
                     </div>
-                    <span className="ml-3 text-sm font-medium text-gray-700">{label}</span>
-                    {current < 3 && <div className="w-10 h-[2px] bg-orange-200 mx-4" />}
-                  </div>
-                );
-              })}
+                  );
+                },
+              )}
             </div>
 
             {/* Main Card */}
             <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-sm flex-1">
-
               {/* ── STEP 1 ── */}
               {step === 1 && (
                 <>
-                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">Price Calculator</h2>
+                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
+                    Price Calculator
+                  </h2>
                   <div className="space-y-5">
-
                     {/* BRAND */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
                         Brand <span className="text-red-500">*</span>
                       </label>
-                      {loadingBrands ? <SelectSkeleton /> : (
+                      {loadingBrands ? (
+                        <SelectSkeleton />
+                      ) : (
                         <div className="relative">
                           <select
                             value={selectedBrand}
                             onChange={(e) => handleBrandChange(e.target.value)}
                             className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white ${
-                              calcError && !selectedBrand ? "border-red-400" : "border-gray-200"
+                              calcError && !selectedBrand
+                                ? "border-red-400"
+                                : "border-gray-200"
                             }`}
                           >
                             <option value="">Select Brand</option>
                             {brands.map((b) => (
-                              <option key={b.id} value={b.id}>{b.name}</option>
+                              <option key={b.id} value={b.id}>
+                                {b.name}
+                              </option>
                             ))}
                           </select>
                           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -527,19 +604,27 @@ useEffect(() => {
                       <label className="block text-sm font-semibold text-gray-800 mb-2">
                         Capacity <span className="text-red-500">*</span>
                       </label>
-                      {loadingCapacity ? <SelectSkeleton /> : (
+                      {loadingCapacity ? (
+                        <SelectSkeleton />
+                      ) : (
                         <div className="relative">
                           <select
                             value={selectedCapacity}
-                            onChange={(e) => setSelectedCapacity(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedCapacity(e.target.value)
+                            }
                             disabled={!selectedBrand}
                             className={`w-full h-12 px-4 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white disabled:opacity-50 ${
-                              calcError && !selectedCapacity ? "border-red-400" : "border-gray-200"
+                              calcError && !selectedCapacity
+                                ? "border-red-400"
+                                : "border-gray-200"
                             }`}
                           >
                             <option value="">Select Capacity</option>
                             {capacityOptions.map((cap) => (
-                              <option key={cap.kva} value={cap.kva}>{cap.kva} KVA</option>
+                              <option key={cap.kva} value={cap.kva}>
+                                {cap.kva} KVA
+                              </option>
                             ))}
                           </select>
                           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -561,21 +646,32 @@ useEffect(() => {
                         >
                           <option value="">Select Year</option>
                           {years.map((year) => (
-                            <option key={year} value={year}>{year}</option>
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
                           ))}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                       </div>
                     </div>
 
-                    {calcError && <p className="text-sm text-red-500 -mt-1">{calcError}</p>}
+                    {calcError && (
+                      <p className="text-sm text-red-500 -mt-1">{calcError}</p>
+                    )}
 
                     <button
                       onClick={handleStep1Next}
                       disabled={calculating}
                       className="w-full h-12 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {calculating ? <><Loader2 className="w-4 h-4 animate-spin" />Calculating...</> : "Next"}
+                      {calculating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Calculating...
+                        </>
+                      ) : (
+                        "Next"
+                      )}
                     </button>
                   </div>
                 </>
@@ -584,11 +680,14 @@ useEffect(() => {
               {/* ── STEP 2 ── */}
               {step === 2 && (
                 <>
-                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">What is the machinery condition?</h2>
+                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
+                    What is the machinery condition?
+                  </h2>
                   <div className="space-y-5">
-
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">Running Hours</label>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Running Hours
+                      </label>
                       <div className="relative">
                         <select
                           value={selectedHours}
@@ -611,11 +710,15 @@ useEffect(() => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">Engine Condition</label>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Engine Condition
+                      </label>
                       <div className="relative">
                         <select
                           value={selectedEngineCondition}
-                          onChange={(e) => setSelectedEngineCondition(e.target.value)}
+                          onChange={(e) =>
+                            setSelectedEngineCondition(e.target.value)
+                          }
                           className="w-full h-12 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#f07020] appearance-none bg-white"
                         >
                           <option value="">Select Engine Condition</option>
@@ -639,7 +742,14 @@ useEffect(() => {
                         disabled={calculating}
                         className="w-full h-12 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        {calculating ? <><Loader2 className="w-4 h-4 animate-spin" />Calculating...</> : "Next"}
+                        {calculating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Calculating...
+                          </>
+                        ) : (
+                          "Next"
+                        )}
                       </button>
                     </div>
                   </div>
@@ -649,7 +759,9 @@ useEffect(() => {
               {/* ── STEP 3 ── */}
               {step === 3 && (
                 <>
-                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">Upload Machinery Images</h2>
+                  <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
+                    Upload Machinery Images
+                  </h2>
                   <div className="border-2 border-dashed border-orange-200 rounded-3xl p-8 text-center bg-orange-50/30">
                     <input
                       type="file"
@@ -659,12 +771,19 @@ useEffect(() => {
                       className="hidden"
                       id="machinery-upload"
                     />
-                    <label htmlFor="machinery-upload" className="cursor-pointer block">
+                    <label
+                      htmlFor="machinery-upload"
+                      className="cursor-pointer block"
+                    >
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#f07020] to-[#ff9b5e] flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <Upload className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-gray-700 font-medium mb-2">Upload up to 3 machinery images</p>
-                      <p className="text-sm text-gray-500 mb-4">Clear images improve valuation accuracy</p>
+                      <p className="text-gray-700 font-medium mb-2">
+                        Upload up to 3 machinery images
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Clear images improve valuation accuracy
+                      </p>
                       <span className="inline-flex h-11 px-6 items-center justify-center bg-[#f07020] text-white rounded-xl font-medium hover:bg-[#d85f14] transition">
                         Choose Images
                       </span>
@@ -674,9 +793,19 @@ useEffect(() => {
                   {uploadedPreviews.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                       {uploadedPreviews.map((preview, index) => (
-                        <div key={index} className="relative rounded-2xl overflow-hidden border border-orange-100">
-                          <img src={preview} alt={`Upload ${index + 1}`} className="w-full h-28 object-cover" />
-                          <button onClick={() => removeImage(index)} className="absolute top-2 right-2 bg-white/90 rounded-full p-1 shadow">
+                        <div
+                          key={index}
+                          className="relative rounded-2xl overflow-hidden border border-orange-100"
+                        >
+                          <img
+                            src={preview}
+                            alt={`Upload ${index + 1}`}
+                            className="w-full h-28 object-cover"
+                          />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute top-2 right-2 bg-white/90 rounded-full p-1 shadow"
+                          >
                             <X className="w-4 h-4 text-gray-700" />
                           </button>
                         </div>
@@ -684,7 +813,9 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {submitError && <p className="text-sm text-red-500 mt-4">{submitError}</p>}
+                  {submitError && (
+                    <p className="text-sm text-red-500 mt-4">{submitError}</p>
+                  )}
 
                   <div className="flex gap-3 pt-6">
                     <button
@@ -699,7 +830,14 @@ useEffect(() => {
                       disabled={submitting}
                       className="w-full h-12 bg-[#f07020] text-white rounded-xl font-semibold hover:bg-[#d85f14] transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Submitting...</> : "Get Price Estimate"}
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        "Get Price Estimate"
+                      )}
                     </button>
                   </div>
                 </>
@@ -709,30 +847,41 @@ useEffect(() => {
 
           {/* RIGHT SIDE */}
           <div className="bg-white rounded-3xl p-8 border border-orange-100 shadow-sm h-full flex flex-col">
-
             {/* PRICE RANGE CARD */}
             <div className="order-1 lg:order-2 mt-0 lg:mt-auto bg-gradient-to-b from-white to-orange-50/40 rounded-3xl p-8 border border-orange-100 mb-8 lg:mb-0">
-
               <h3 className="text-3xl font-bold text-[#1a1a1a] mb-8">
                 Evaluation Range
               </h3>
 
-              {calculating && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#f07020]" />
-                  Fetching price estimate...
-                </div>
-              )}
+     
 
-              {!calculating && priceRange && (
+             {priceRange && (
                 <div className="relative px-2">
                   <div className="flex justify-between items-end mb-5">
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-[#1a1a1a]">{formatCurrency(priceRange.low)}</p>
+                      <p className="text-3xl font-bold text-[#1a1a1a]">
+                        ₹
+                        <CountUp
+                          key={priceRange.low}
+                          start={0}
+                          end={priceRange.low}
+                          duration={0.8}
+                          separator=","
+                        />
+                      </p>
                       <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#444] mx-auto mt-2" />
                     </div>
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-[#1a1a1a]">{formatCurrency(priceRange.high)}</p>
+                      <p className="text-3xl font-bold text-[#1a1a1a]">
+                        ₹
+                        <CountUp
+                          key={priceRange.high}
+                          start={0}
+                          end={priceRange.high}
+                          duration={0.8}
+                          separator=","
+                        />
+                      </p>
                       <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#444] mx-auto mt-2" />
                     </div>
                   </div>
@@ -759,7 +908,9 @@ useEffect(() => {
 
             {/* WHY CHOOSE US */}
             <div className="order-2 lg:order-1 mb-8 lg:mb-0">
-              <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">Why Choose Us?</h2>
+              <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6">
+                Why Choose Us?
+              </h2>
               <div className="space-y-5">
                 {[
                   "Hassle-Free Machinery Selling Experience",
@@ -769,14 +920,14 @@ useEffect(() => {
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-[#f07020] mt-0.5" />
-                    <span className="text-gray-700 text-base leading-relaxed">{item}</span>
+                    <span className="text-gray-700 text-base leading-relaxed">
+                      {item}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
-
         </div>
       </div>
 

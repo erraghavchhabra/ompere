@@ -39,27 +39,23 @@ export default async function HowItWorksPage() {
               />
             );
 
-          case "why_process":
+          case "why_process1":
             return (
               <WhyProcess
-                key={section.id}
-                data={section.section_data}
+              
               />
             );
 
-          case "faq":
+          case "faq1":
             return (
               <FAQ
-                key={section.id}
-                data={section.section_data}
               />
             );
 
-          case "final_cta":
+          case "final_cta1":
             return (
               <FinalCTA
-                key={section.id}
-                data={section.section_data}
+               
               />
             );
 
@@ -67,6 +63,19 @@ export default async function HowItWorksPage() {
             return null;
         }
       })}
+
+ <WhyProcess/>
+       <FAQ
+              />
+
+        <FinalCTA
+        title="Ready to Get Started?"
+        desc="Join hundreds of satisfied sellers. Get your instant price estimate now!"
+        primaryText="Calculate Price →"
+        secondaryText="Talk to Expert"
+        primaryLink="/calculator"
+        secondaryLink="/contact"
+      />
 
     </main>
   );
